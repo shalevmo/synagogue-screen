@@ -12,6 +12,7 @@
   "dependencies": {
     "@hebcal/core": "^6.5.1",
     "bootstrap": "^5.3.8",
+    "firebase": "^12.13.0",
     "kosher-zmanim": "^0.9.0",
     "luxon": "^3.7.2",
     "react": "^19.2.6",
