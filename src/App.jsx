@@ -254,19 +254,22 @@ export default function App() {
             </div>
           </div>
         ) : (
-          /* ══════ Image view (holiday schedule) ══════ */
-          <div className="row ps-5 pe-5 mt-4 flex-grow-1 mb-3">
-            {activeImage && (
-              <div className="col-12 d-flex align-items-center justify-content-center" style={{ flex: 1 }}>
-                <img
-                  src={activeImage.imageUrl}
-                  alt={activeImage.name || ''}
-                  className="w-100 h-100"
-                  style={{ objectFit: 'fill' }}
-                />
-              </div>
-            )}
-          </div>
+          /* ══════ Image view (holiday schedule) — full screen ══════ */
+          activeImage && (
+            <img
+              src={activeImage.imageUrl}
+              alt={activeImage.name || ''}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                objectFit: 'fill',
+                zIndex: 10,
+              }}
+            />
+          )
         )}
 
       </div>
