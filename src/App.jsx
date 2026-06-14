@@ -47,8 +47,11 @@ function findParsha(hd, gloc) {
 
   if (cal) {
     for (const ev of cal) {
-      if (ev.constructor.name === 'ParshaEvent') {
-        return stripNikkud(ev.render('he')).replace(/\s*\(.*\)/, '').trim();
+      // Don't rely on constructor.name — it is mangled by minifiers.
+      // Parsha events render Hebrew text starting with 'פָּרָשַׁת' / 'פרשת'.
+      const hebrew = stripNikkud(ev.render('he') || '').trim();
+      if (/^פרש[הת] /.test(hebrew)) {
+        return hebrew.replace(/\s*\(.*\)/, '').trim();
       }
     }
   }
