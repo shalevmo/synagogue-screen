@@ -11,4 +11,33 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('[SW] registered:', registration.scope);
+
+          // Listen for messages from the SW (e.g. reload request)
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'RELOAD_PAGE') {
+              console.log('[SW] reloading for new version');
+              window.location.reload();
+            }
+          });
+
+          // If a new service worker is waiting, ask it to activate
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  newWorker.postMessage('SKIP_WAITING');
+                }
+              });
+            }
+          });
+        })
+        .catch((err) => console.error('[SW] registration failed:', err));
+    }
+  </script>
 </html>
