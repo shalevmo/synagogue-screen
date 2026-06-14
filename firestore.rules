@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Public read-only data for the synagogue display screen.
+    // No authentication is required because this is a public-facing
+    // information screen. Write access should only be granted to
+    // synagogue administrators (via Firebase Console or Admin SDK).
+    match /config/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /prayers/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /images/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}
