@@ -1,0 +1,46 @@
+{
+  "__collections": {
+    "config": {
+      "app-config": {
+        "title": "משכן שמואל",
+        "defaultViewDuration": 15,
+        "imageDisplayDuration": 15,
+        "location": {
+          "lat": 31.42215,
+          "lng": 34.58858,
+          "timezone": "Asia/Jerusalem",
+          "name": "Netivot, Israel",
+          "elevation": 0
+        }
+      }
+    },
+    "prayers": {
+      "prayer-1": {
+        "order": 1,
+        "name": "שחרית של חול",
+        "time": "07:00"
+      },
+      "prayer-2": {
+        "order": 2,
+        "name": "מנחה וקבלת שבת",
+        "time": "עם כניסת השבת"
+      },
+      "prayer-3": {
+        "order": 3,
+        "name": "שחרית של שבת",
+        "time": "08:00"
+      },
+      "prayer-4": {
+        "order": 4,
+        "name": "מנחה של שבת",
+        "time": "13:15"
+      },
+      "prayer-5": {
+        "order": 5,
+        "name": "ערבית של מוצ״ש",
+        "time": "5 דקות לפני צאת השבת"
+      }
+    },
+    "images": {}
+  }
+}
