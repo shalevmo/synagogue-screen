@@ -262,7 +262,7 @@ export default function App() {
                   src={activeImage.imageUrl}
                   alt={activeImage.name || ''}
                   className="w-100 h-100"
-                  style={{ objectFit: 'cover' }}
+                  style={{ objectFit: 'fill' }}
                 />
               </div>
             )}
