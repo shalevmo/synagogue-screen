@@ -215,13 +215,8 @@ export default function App() {
           <span className="h1 col-4 mb-0 ps-3 pe-3">{dayAndDate}</span>
         </div>
 
-        {/* Spacer image (matches original's broken image — 16px spacer) */}
-        <img
-          src="/line.png"
-          className="col-12 mb-4 w-100"
-          alt=""
-          style={{ height: 16, objectFit: 'none' }}
-        />
+        {/* No horizontal separator — original used line.png only as vertical
+            column edges via .bordered CSS (Asset 2.jpg was broken/404 there) */}
 
         {showDefault ? (
           /* ══════ Default view: zmanim | parsha + clock | prayers ══════ */
