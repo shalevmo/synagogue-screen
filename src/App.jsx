@@ -28,7 +28,9 @@ function fmt(d) {
 
 function stripNikkud(text) {
   if (!text) return '';
-  return text.replace(/[\u0591-\u05C7]/g, '');
+  // Strip nikkud/vowel points, but KEEP the maqaf (U+05BE, Hebrew hyphen) —
+  // hebcal joins double parshas with it (e.g. נצבים־וילך).
+  return text.replace(/[\u0591-\u05BD\u05BF\u05C1-\u05C2\u05C4-\u05C7]/g, '');
 }
 
 /** Find the upcoming Shabbat's parsha */
