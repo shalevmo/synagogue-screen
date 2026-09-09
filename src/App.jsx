@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { HDate, HebrewCalendar, Location, Zmanim } from '@hebcal/core';
+import { HDate, Location, Zmanim } from '@hebcal/core';
 import { useFirestoreData } from './hooks/useFirestore';
+import { stripNikkud, findShabbatReading } from './lib/reading';
 import './index.css';
 
 // ─── zmanim keys (unchanged) ──────────────────────────────────────────────────
@@ -24,40 +25,6 @@ function fmt(d) {
   return new Intl.DateTimeFormat('en-US', {
     hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Jerusalem',
   }).format(d);
-}
-
-function stripNikkud(text) {
-  if (!text) return '';
-  // Strip nikkud/vowel points, but KEEP the maqaf (U+05BE, Hebrew hyphen) —
-  // hebcal joins double parshas with it (e.g. נצבים־וילך).
-  return text.replace(/[\u0591-\u05BD\u05BF\u05C1-\u05C2\u05C4-\u05C7]/g, '');
-}
-
-/** Find the upcoming Shabbat's parsha */
-function findParsha(hd, gloc) {
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const daysUntilShabbat = dayOfWeek === 6 ? 7 : 6 - dayOfWeek;
-  const shabbat = new Date(now);
-  shabbat.setDate(shabbat.getDate() + daysUntilShabbat);
-  const shabbatHd = new HDate(shabbat);
-
-  const cal = HebrewCalendar.calendar({
-    start: shabbatHd, end: shabbatHd,
-    il: true, location: gloc, sedrot: true,
-  });
-
-  if (cal) {
-    for (const ev of cal) {
-      // Don't rely on constructor.name — it is mangled by minifiers.
-      // Parsha events render Hebrew text starting with 'פָּרָשַׁת' / 'פרשת'.
-      const hebrew = stripNikkud(ev.render('he') || '').trim();
-      if (/^פרש[הת] /.test(hebrew)) {
-        return hebrew.replace(/\s*\(.*\)/, '').trim();
-      }
-    }
-  }
-  return '';
 }
 
 /** Check whether a Hebrew date falls inside a Firestore schedule range */
@@ -94,7 +61,7 @@ export default function App() {
   const [jewishDate, setJewishDate] = useState('');
   const [dayAndDate, setDayAndDate] = useState('');
   const [zmanimTimes, setZmanimTimes] = useState([]);
-  const [parshaName, setParshaName] = useState('');
+  const [reading, setReading] = useState({ text: '', isHoliday: false });
   const [activeImage, setActiveImage] = useState(null);
   const [gloc, setGloc] = useState(null);
 
@@ -145,8 +112,9 @@ export default function App() {
       return { name, time: val };
     }));
 
-    // Parsha
-    setParshaName(findParsha(hd, gloc));
+    // Parsha — or the holiday reading when no regular parsha is read
+    // (Rosh Hashana / Yom Kippur / Sukkot / Shmini Atzeret / Pesach Shabbats).
+    setReading(findShabbatReading(now, gloc));
 
     // Active image based on Hebrew date
     // displayHd has the correct Hebrew date
@@ -233,9 +201,11 @@ export default function App() {
 
             <div className="bordered col-4 d-flex flex-column text-center justify-content-between">
               <div className="d-flex flex-column">
-                <span className="h1 col-12 text-center mb-0">פרשת השבוע</span>
-                {parshaName && (
-                  <span className="col-12 text-center red special-text">{parshaName}</span>
+                <span className="h1 col-12 text-center mb-0">
+                  {reading.isHoliday ? 'קריאת החג' : 'פרשת השבוע'}
+                </span>
+                {reading.text && (
+                  <span className="col-12 text-center red special-text">{reading.text}</span>
                 )}
               </div>
               <span id="clock">{clock}</span>
