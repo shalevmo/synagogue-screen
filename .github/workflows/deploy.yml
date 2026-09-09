@@ -49,6 +49,7 @@ jobs:
         run: |
           aws s3 sync dist/ "s3://${{ secrets.S3_BUCKET }}" \
             --delete \
+            --exclude "screen/*" \
             --cache-control "max-age=3600,public"
 
       - name: Invalidate CloudFront
@@ -61,8 +62,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Determine the next patch version from the latest tag
-          latest=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          # Determine the next patch version from the latest semver tag
+          # (ignore non-semver tags like the temporary screen-upload release tag)
+          latest=$(git tag --list --sort=-creatordate 'v[0-9]*.[0-9]*.[0-9]*' | head -n1)
+          [[ -n "$latest" ]] || latest="v0.0.0"
           if [[ "$latest" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             major="${BASH_REMATCH[1]}"
             minor="${BASH_REMATCH[2]}"
