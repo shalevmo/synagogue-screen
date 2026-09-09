@@ -1,0 +1,139 @@
+name: Upload Screen Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: "ID of the temporary draft release that holds the image asset"
+        type: string
+        required: false
+        default: ""
+      image_url:
+        description: "Direct URL to the image (alternative to release_id)"
+        type: string
+        required: false
+        default: ""
+      filename:
+        description: "S3 object name (default: the asset's file name)"
+        type: string
+        required: false
+        default: ""
+      s3_folder:
+        description: "Static folder in the bucket to place the image in"
+        type: string
+        required: false
+        default: "screen"
+      public_base_url:
+        description: "Public base URL of the site (for the printed link)"
+        type: string
+        required: false
+        default: "https://synagogue.moriamoyal.com"
+
+permissions:
+  contents: write
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Fetch and validate image
+        id: fetch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ inputs.release_id }}
+          IMAGE_URL: ${{ inputs.image_url }}
+          FILENAME: ${{ inputs.filename }}
+          FOLDER_IN: ${{ inputs.s3_folder }}
+        run: |
+          set -euo pipefail
+
+          if [[ -n "$IMAGE_URL" ]]; then
+            echo "Downloading image from URL…"
+            curl -fsSL --max-time 300 "$IMAGE_URL" -o image.bin
+            DEFAULT_NAME=$(basename "$IMAGE_URL" | cut -d'?' -f1)
+          elif [[ -n "$RELEASE_ID" ]]; then
+            echo "Downloading image from draft release $RELEASE_ID…"
+            ASSETS=$(gh api "repos/${{ github.repository }}/releases/$RELEASE_ID/assets")
+            ASSET_URL=$(jq -r '.[0].url' <<<"$ASSETS")
+            DEFAULT_NAME=$(jq -r '.[0].name' <<<"$ASSETS")
+            gh api -H "Accept: application/octet-stream" "$ASSET_URL" > image.bin
+          else
+            echo "::error::Either 'release_id' or 'image_url' must be provided."
+            exit 1
+          fi
+
+          [[ -s image.bin ]] || { echo "::error::Downloaded file is empty."; exit 1; }
+
+          SIZE=$(stat -c%s image.bin)
+          (( SIZE <= 52428800 )) || { echo "::error::Image exceeds 50MB ($SIZE bytes)."; exit 1; }
+
+          MIME=$(file --mime-type -b image.bin)
+          [[ "$MIME" == image/* ]] || { echo "::error::File is not an image (detected: $MIME)."; exit 1; }
+
+          NAME="${FILENAME:-$DEFAULT_NAME}"
+          NAME="${NAME//[!A-Za-z0-9._-]/_}"
+          [[ -n "$NAME" && "$NAME" != *..* ]] || { echo "::error::Invalid filename '$NAME'."; exit 1; }
+
+          FOLDER="${FOLDER_IN:-screen}"
+          FOLDER="${FOLDER//[!A-Za-z0-9._-]/_}"
+          [[ -n "$FOLDER" && "$FOLDER" != *..* ]] || { echo "::error::Invalid s3_folder '$FOLDER'."; exit 1; }
+
+          {
+            echo "name=$NAME"
+            echo "mime=$MIME"
+            echo "folder=$FOLDER"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Image OK: $NAME ($MIME, $SIZE bytes) → s3://…/$FOLDER/$NAME"
+
+      - name: Upload to S3
+        env:
+          BUCKET: ${{ secrets.S3_BUCKET }}
+        run: |
+          set -euo pipefail
+          aws s3 cp image.bin "s3://$BUCKET/${{ steps.fetch.outputs.folder }}/${{ steps.fetch.outputs.name }}" \
+            --content-type "${{ steps.fetch.outputs.mime }}" \
+            --cache-control "max-age=60,public"
+
+      - name: Invalidate CloudFront
+        env:
+          DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          set -euo pipefail
+          PATH_TO_INVALIDATE="/${{ steps.fetch.outputs.folder }}/${{ steps.fetch.outputs.name }}"
+          for attempt in 1 2 3; do
+            if aws cloudfront create-invalidation \
+              --distribution-id "$DISTRIBUTION_ID" \
+              --paths "$PATH_TO_INVALIDATE"; then
+              echo "Invalidation created for $PATH_TO_INVALIDATE"
+              exit 0
+            fi
+            echo "Invalidation attempt $attempt failed; retrying in 20s…"
+            sleep 20
+          done
+          echo "::warning::CloudFront invalidation failed — S3 is updated; CDN will refresh within 60s (cache-control: max-age=60)."
+
+      - name: Delete temporary draft release
+        if: ${{ inputs.release_id != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api -X DELETE "repos/${{ github.repository }}/releases/${{ inputs.release_id }}" || true
+          gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/screen-upload" || true
+
+      - name: Summary
+        run: |
+          URL="${{ inputs.public_base_url }}/${{ steps.fetch.outputs.folder }}/${{ steps.fetch.outputs.name }}"
+          {
+            echo "## Screen image uploaded"
+            echo ""
+            echo "**URL:** $URL"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Uploaded: $URL"
