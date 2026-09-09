@@ -40,7 +40,10 @@ RELEASE_ID=$(gh api -X POST "repos/$REPO/releases" \
   -f tag_name="$TAG" -f name="Screen image upload" -F draft=true --jq .id)
 
 echo "→ Attaching $IMG as $NAME…"
-gh api --method POST "repos/$REPO/releases/$RELEASE_ID/assets?name=$NAME" \
+# Asset uploads go to uploads.github.com (from the release's upload_url),
+# not api.github.com — posting to the API path returns 404.
+UPLOAD_URL=$(gh api "repos/$REPO/releases/$RELEASE_ID" --jq '.upload_url' | cut -d'{' -f1)
+gh api --method POST "$UPLOAD_URL?name=$NAME" \
   -H "Content-Type: application/octet-stream" --input "$IMG" --jq .id >/dev/null
 
 echo "→ Dispatching workflow…"
