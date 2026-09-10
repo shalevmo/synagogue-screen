@@ -21,7 +21,9 @@ export function stripNikkud(text) {
  * show the holiday name as the reading. All computation is local
  * (@hebcal/core), no external APIs.
  *
- * Ultimate fallback (holiday event unexpectedly missing): "קריאת החג".
+ * Ultimate fallback (holiday event unexpectedly missing): the holiday
+ * reading is shown as "קריאת החג ראש השנה" style text — with just the
+ * generic label if even the holiday name is unavailable.
  *
  * @param {Date} now  reference "today"
  * @param {Location|null} gloc  optional Location (parity with old findParsha)
@@ -60,6 +62,7 @@ export function findShabbatReading(now, gloc) {
     }
   }
 
-  // No parsha this Shabbat — the reading is the holiday's (קריאת החג).
-  return { text: holidayName || 'קריאת החג', isHoliday: true };
+  // No parsha this Shabbat — the reading is the holiday's. The header stays
+  // "פרשת השבוע" (App.jsx); show just the generic holiday-reading label.
+  return { text: 'קריאת החג', isHoliday: true };
 }

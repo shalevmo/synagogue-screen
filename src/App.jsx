@@ -201,9 +201,7 @@ export default function App() {
 
             <div className="bordered col-4 d-flex flex-column text-center justify-content-between">
               <div className="d-flex flex-column">
-                <span className="h1 col-12 text-center mb-0">
-                  {reading.isHoliday ? 'קריאת החג' : 'פרשת השבוע'}
-                </span>
+                <span className="h1 col-12 text-center mb-0">פרשת השבוע</span>
                 {reading.text && (
                   <span className="col-12 text-center red special-text">{reading.text}</span>
                 )}
