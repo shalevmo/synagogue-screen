@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { HDate, Location, Zmanim } from '@hebcal/core';
 import { useFirestoreData } from './hooks/useFirestore';
 import { stripNikkud, findShabbatReading } from './lib/reading';
@@ -18,13 +18,22 @@ const ZMANIM_ALL = [
   { fn: 'tzaisBaalHatanya',name: 'צאת הכוכבים' },
 ];
 
+// ─── module-scope Intl formatters (hoisted: construction is expensive) ────────
+
+const TIME_FMT = new Intl.DateTimeFormat('en-US', {
+  hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Jerusalem',
+});
+const CLOCK_FMT = new Intl.DateTimeFormat('en-US', {
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+  hour12: false, timeZone: 'Asia/Jerusalem',
+});
+const DOW_FMT = new Intl.DateTimeFormat('he', { weekday: 'short', timeZone: 'Asia/Jerusalem' });
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(d) {
   if (!d) return '';
-  return new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Jerusalem',
-  }).format(d);
+  return TIME_FMT.format(d);
 }
 
 /** Check whether a Hebrew date falls inside a Firestore schedule range */
@@ -52,128 +61,148 @@ function findActiveImage(images, hMonth, hDay, hYear) {
   }) || null;
 }
 
+/**
+ * Compute all date-derived display data (Hebrew date, Gregorian date,
+ * zmanim, parsha/holiday reading, active image) for a given instant.
+ * Pure function — called from render via useMemo, never from an effect.
+ */
+function computeDisplayData(gloc, images, now) {
+  const hd = new HDate(now);
+  const z = new Zmanim(gloc, now);
+
+  // Jewish date in header
+  const tzaisAt = z.tzeit();
+  const isAfterTzais = tzaisAt && now > tzaisAt;
+  const displayHd = isAfterTzais
+    ? new HDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1))
+    : hd;
+  const prefix = isAfterTzais ? 'אור ל' : '';
+  const jewishDate = (prefix + stripNikkud(displayHd.renderGematriya())).trim();
+
+  // Day + Gregorian date
+  const dow = DOW_FMT.format(now);
+  const dd = String(now.getDate()).padStart(2, '0');
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const yyyy = now.getFullYear();
+  const dayAndDate = `${dow}\u00a0|\u00a0${dd}/${mm}/${yyyy}`;
+
+  // Zmanim
+  const zmanimTimes = ZMANIM_ALL.map(({ fn, name }) => {
+    let val = '';
+    try {
+      val = fmt(z[fn]());
+    } catch {
+      // certain zmanim may not exist for this location/date — leave blank
+    }
+    return { name, time: val };
+  });
+
+  // Parsha — or the holiday reading when no regular parsha is read
+  // (Rosh Hashana / Yom Kippur / Sukkot / Shmini Atzeret / Pesach Shabbats).
+  const reading = findShabbatReading(now, gloc);
+
+  // Active image based on Hebrew date (displayHd has the correct date)
+  const hMonth = displayHd.getMonth();        // 1‑based (1=Tishrei, 7=Nisan)
+  const hDay   = displayHd.getDate();         // 1‑31
+  const hYear  = displayHd.getFullYear();
+  const activeImage = findActiveImage(images, hMonth, hDay, hYear);
+
+  return { jewishDate, dayAndDate, zmanimTimes, reading, activeImage };
+}
+
+/** Toggle browser fullscreen (module scope — pure, uses no component state) */
+async function toggleFullScreen() {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch {
+    // browser may refuse (e.g. no user gesture); kiosk runs fullscreen anyway
+  }
+}
+
+/** Keyboard equivalent of the click-to-fullscreen handler (a11y) */
+function handleKeyDown(e) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    toggleFullScreen();
+  }
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
   const { config, prayers, images } = useFirestoreData();
+  const [now, setNow] = useState(() => new Date());
   const [showDefault, setShowDefault] = useState(true);
-  const [clock, setClock] = useState('');
-  const [jewishDate, setJewishDate] = useState('');
-  const [dayAndDate, setDayAndDate] = useState('');
-  const [zmanimTimes, setZmanimTimes] = useState([]);
-  const [reading, setReading] = useState({ text: '', isHoliday: false });
-  const [activeImage, setActiveImage] = useState(null);
-  const [gloc, setGloc] = useState(null);
 
-  // Build Location object from config
-  useEffect(() => {
+  // Build Location object from config (memoized — no effect or extra state)
+  const gloc = useMemo(() => {
     const loc = config.location || {};
-    setGloc(new Location(
+    return new Location(
       loc.lat ?? 31.42215,
       loc.lng ?? 34.58858,
       true,
       loc.timezone ?? 'Asia/Jerusalem',
       loc.elevation ?? 0,
-    ));
+    );
   }, [config.location]);
 
-  const updateData = useCallback(() => {
-    if (!gloc) return;
-    const now = new Date();
-    const hd = new HDate(now);
-    const z = new Zmanim(gloc, now);
-
-    // Clock
-    setClock(new Intl.DateTimeFormat('en-US', {
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hour12: false, timeZone: 'Asia/Jerusalem',
-    }).format(now));
-
-    // Jewish date in header
-    const tzaisAt = z.tzeit();
-    const isAfterTzais = tzaisAt && now > tzaisAt;
-    const displayHd = isAfterTzais
-      ? new HDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1))
-      : hd;
-    const prefix = isAfterTzais ? 'אור ל' : '';
-    setJewishDate((prefix + stripNikkud(displayHd.renderGematriya())).trim());
-
-    // Day + Gregorian date
-    const dow = new Intl.DateTimeFormat('he', { weekday: 'short', timeZone: 'Asia/Jerusalem' }).format(now);
-    const dd = String(now.getDate()).padStart(2, '0');
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const yyyy = now.getFullYear();
-    setDayAndDate(`${dow}\u00a0|\u00a0${dd}/${mm}/${yyyy}`);
-
-    // Zmanim
-    setZmanimTimes(ZMANIM_ALL.map(({ fn, name }) => {
-      let val = '';
-      try { val = fmt(z[fn]()); } catch (e) {}
-      return { name, time: val };
-    }));
-
-    // Parsha — or the holiday reading when no regular parsha is read
-    // (Rosh Hashana / Yom Kippur / Sukkot / Shmini Atzeret / Pesach Shabbats).
-    setReading(findShabbatReading(now, gloc));
-
-    // Active image based on Hebrew date
-    // displayHd has the correct Hebrew date
-    const hMonth = displayHd.getMonth();        // 1‑based (1=Tishrei, 7=Nisan)
-    const hDay   = displayHd.getDate();         // 1‑31
-    const hYear  = displayHd.getFullYear();
-    setActiveImage(findActiveImage(images, hMonth, hDay, hYear));
-  }, [gloc, images]);
-
-  // Recompute every time gloc changes (Firebase location)
+  // Single ticker: the only state this component owns besides the view toggle.
+  // setState runs inside the interval callback, never synchronously in the effect.
   useEffect(() => {
-    if (!gloc) return;
-    updateData();
-    const ci = setInterval(() => setClock(
-      new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Jerusalem' }).format(new Date())
-    ), 1000);
-    const di = setInterval(updateData, 60000);
-    return () => { clearInterval(ci); clearInterval(di); };
-  }, [gloc, updateData]);
+    const ci = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(ci);
+  }, []);
 
-  // Toggle between default view and image view
+  // Heavy date/zmanim/parsha math recomputed once per minute (keyed by the
+  // minute bucket), not on every clock tick. Pure computation during render.
+  const minute = Math.floor(now.getTime() / 60000);
+  const { jewishDate, dayAndDate, zmanimTimes, reading, activeImage } = useMemo(
+    () => computeDisplayData(gloc, images, new Date(minute * 60000)),
+    [gloc, images, minute],
+  );
+  const clock = CLOCK_FMT.format(now);
+
+  // When the active image changes (new holiday image starts), restart the
+  // slideshow cycle from the default view. Adjusting state during render is
+  // the documented React pattern for reacting to changed props/state.
+  const [prevImage, setPrevImage] = useState(activeImage);
+  if (activeImage !== prevImage) {
+    setPrevImage(activeImage);
+    setShowDefault(true);
+  }
+
+  // Slideshow: show the current view for its configured duration, then flip.
+  // The effect re-runs on each flip and schedules the next one — pure state
+  // updates inside the timeout callback, StrictMode-safe.
+  const defaultDur = (config.defaultViewDuration ?? 15) * 1000;
+  const imageDur  = (config.imageDisplayDuration ?? 15) * 1000;
   useEffect(() => {
-    if (!config) return;
-    const defaultDur = (config.defaultViewDuration ?? 15) * 1000;
-    const imageDur  = (config.imageDisplayDuration ?? 15) * 1000;
-
-    // If no active image, always show default
-    if (!activeImage) {
-      setShowDefault(true);
-      return;
-    }
-
-    // Toggle between default and image view
-    let timer;
-    const tick = () => {
-      setShowDefault(prev => {
-        const next = !prev;
-        timer = setTimeout(tick, next ? defaultDur : imageDur);
-        return next;
-      });
-    };
-    timer = setTimeout(tick, defaultDur); // start with default view
-
+    if (!activeImage) return;
+    const timer = setTimeout(
+      () => setShowDefault(v => !v),
+      showDefault ? defaultDur : imageDur,
+    );
     return () => clearTimeout(timer);
-  }, [activeImage, config]);
+  }, [activeImage, showDefault, defaultDur, imageDur]);
 
-  const toggleFullScreen = async () => {
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else await document.documentElement.requestFullscreen();
-    } catch (e) {}
-  };
+  // If no image is scheduled, always show the default view.
+  const showingDefault = !activeImage || showDefault;
 
   // ── render ──────────────────────────────────────────────────────────────
 
   const title = config?.title ?? 'משכן שמואל';
 
   return (
-    <div id="content-wrapper" onClick={toggleFullScreen} style={{ cursor: 'pointer' }}>
+    <div
+      id="content-wrapper"
+      role="button"
+      tabIndex={0}
+      aria-label="מסך מלא"
+      onClick={toggleFullScreen}
+      onKeyDown={handleKeyDown}
+      style={{ cursor: 'pointer' }}
+    >
       <div className="container-fluid p-0 w-100 h-100 d-flex flex-column">
 
         {/* Header */}
@@ -186,13 +215,13 @@ export default function App() {
         {/* No horizontal separator — original used line.png only as vertical
             column edges via .bordered CSS (Asset 2.jpg was broken/404 there) */}
 
-        {showDefault ? (
+        {showingDefault ? (
           /* ══════ Default view: zmanim | parsha + clock | prayers ══════ */
           <div className="row ps-5 pe-5 mt-4 flex-grow-1 mb-3">
 
             <div className="bordered col-4 d-flex flex-column p-3 pb-5 pe-5 justify-content-between">
-              {zmanimTimes.map((z, i) => (
-                <div key={i} className="d-flex flex-row justify-content-between h1">
+              {zmanimTimes.map(z => (
+                <div key={z.name} className="d-flex flex-row justify-content-between h1">
                   <span>{z.name}</span>
                   <span>{z.time}</span>
                 </div>
@@ -210,8 +239,8 @@ export default function App() {
             </div>
 
             <div className="bordered col-4 d-flex flex-column p-3 pb-5 justify-content-between">
-              {prayers.map((p, i) => (
-                <div key={i} className="d-flex flex-column align-items-center">
+              {prayers.map(p => (
+                <div key={p.id ?? p.name} className="d-flex flex-column align-items-center">
                   <span className="h1 mb-0">{p.name}</span>
                   <span className="h2 prayer-time">{p.time}</span>
                 </div>
