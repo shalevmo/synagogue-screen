@@ -275,26 +275,19 @@ export default function App() {
             Stays mounted the whole time it is scheduled, so the browser
             downloads and decodes it in the background during the default view
             and keeps the decoded bitmap across flips: no re-download, no
-            re-decode, instant paint. Only its visibility flips. */}
+            re-decode. Visibility flips via a 1s opacity crossfade (CSS class
+            .holiday-image + data-hidden) instead of mounting/unmounting. */}
         {activeImage && (
           <img
             key={activeImage.imageUrl}
+            className="holiday-image"
             data-view="holiday-image"
+            data-hidden={showingImage ? 'false' : 'true'}
             src={activeImage.imageUrl}
             alt={activeImage.name || ''}
             fetchPriority="high"
             onLoad={handleImageLoad}
             onError={() => setImageReady(false)}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100vw',
-              height: '100vh',
-              objectFit: 'fill',
-              zIndex: 10,
-              visibility: showingImage ? 'visible' : 'hidden',
-            }}
           />
         )}
 

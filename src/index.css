@@ -48,6 +48,29 @@ body {
   background: none;
 }
 
+/* ── Holiday image overlay ──
+   Crossfade between default view and holiday image: the image is always
+   mounted on top; only its opacity animates (GPU-composited, cheap on the
+   Pi). `visibility` participates in the same transition so the element
+   stays interactive-visible while fading and hides exactly at opacity 0. */
+.holiday-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: fill;
+  z-index: 10;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 1s ease-in-out, visibility 1s;
+}
+
+.holiday-image[data-hidden='true'] {
+  opacity: 0;
+  visibility: hidden;
+}
+
 span {
   line-height: 1;
 }
