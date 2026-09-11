@@ -47,10 +47,19 @@ jobs:
 
       - name: Sync to S3
         run: |
+          # 1. Everything except index.html + screen images: 1h cache
+          #    (asset filenames are content-hashed → safe to cache)
           aws s3 sync dist/ "s3://${{ secrets.S3_BUCKET }}" \
             --delete \
             --exclude "screen/*" \
+            --exclude "index.html" \
             --cache-control "max-age=3600,public"
+          # 2. index.html: no-cache — it references the hashed bundle names,
+          #    so a stale edge copy delays every deploy by up to 1h.
+          aws s3 cp dist/index.html "s3://${{ secrets.S3_BUCKET }}/index.html" \
+            --cache-control "no-cache" \
+            --content-type "text/html" \
+            --metadata-directive REPLACE
 
       - name: Invalidate CloudFront
         run: |
