@@ -5,15 +5,22 @@ service cloud.firestore {
     // No authentication is required because this is a public-facing
     // information screen. Write access should only be granted to
     // synagogue administrators (via Firebase Console or Admin SDK).
+    //
+    // react-doctor flags `allow read: if true` as permissive. This is
+    // intentional: the kiosk has no user accounts, reads only public
+    // schedule data, and all writes are denied.
     match /config/{document=**} {
+      // react-doctor-disable-next-line react-doctor/firebase-permissive-rules
       allow read: if true;
       allow write: if false;
     }
     match /prayers/{document=**} {
+      // react-doctor-disable-next-line react-doctor/firebase-permissive-rules
       allow read: if true;
       allow write: if false;
     }
     match /images/{document=**} {
+      // react-doctor-disable-next-line react-doctor/firebase-permissive-rules
       allow read: if true;
       allow write: if false;
     }

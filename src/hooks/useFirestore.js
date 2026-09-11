@@ -88,7 +88,6 @@ export function useFirestoreData() {
   const [config, setConfig] = useState(null);
   const [prayers, setPrayers] = useState(null);
   const [images, setImages] = useState(null);
-  const [activeImage, setActiveImage] = useState(null);
   const unsubRef = useRef([]);
 
   useEffect(() => {
@@ -120,7 +119,7 @@ export function useFirestoreData() {
       qPrayers,
       (snap) => {
         if (!snap.empty) {
-          setPrayers(snap.docs.map(d => d.data()));
+          setPrayers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         } else {
           setPrayers(null); // null = use DEFAULTS
         }
