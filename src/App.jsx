@@ -134,6 +134,7 @@ export default function App() {
   const { config, prayers, images } = useFirestoreData();
   const [now, setNow] = useState(() => new Date());
   const [showDefault, setShowDefault] = useState(true);
+  const [imageReady, setImageReady] = useState(false);
 
   // Build Location object from config (memoized — no effect or extra state)
   const gloc = useMemo(() => {
@@ -163,31 +164,49 @@ export default function App() {
   );
   const clock = CLOCK_FMT.format(now);
 
-  // When the active image changes (new holiday image starts), restart the
-  // slideshow cycle from the default view. Adjusting state during render is
-  // the documented React pattern for reacting to changed props/state.
+  // When the active image changes (e.g. the Rosh Hashana poster activates),
+  // restart from the default view. The new image is never displayed until it
+  // has fully downloaded AND decoded (see handleImageLoad) — a progressive /
+  // half-painted image is never shown, and the default view keeps running
+  // underneath in the meantime. Adjusting state during render is the
+  // documented React pattern for reacting to changed values.
   const [prevImage, setPrevImage] = useState(activeImage);
   if (activeImage !== prevImage) {
     setPrevImage(activeImage);
     setShowDefault(true);
+    setImageReady(false);
   }
 
   // Slideshow: show the current view for its configured duration, then flip.
-  // The effect re-runs on each flip and schedules the next one — pure state
-  // updates inside the timeout callback, StrictMode-safe.
+  // The cycle only runs while the scheduled image is fully decoded & ready —
+  // if the image is still downloading, the default view simply stays up.
   const defaultDur = (config.defaultViewDuration ?? 15) * 1000;
   const imageDur  = (config.imageDisplayDuration ?? 15) * 1000;
   useEffect(() => {
-    if (!activeImage) return;
+    if (!activeImage || !imageReady) return;
     const timer = setTimeout(
       () => setShowDefault(v => !v),
       showDefault ? defaultDur : imageDur,
     );
     return () => clearTimeout(timer);
-  }, [activeImage, showDefault, defaultDur, imageDur]);
+  }, [activeImage, imageReady, showDefault, defaultDur, imageDur]);
 
-  // If no image is scheduled, always show the default view.
-  const showingDefault = !activeImage || showDefault;
+  // Fired when the <img> finishes downloading. decode() pushes the full
+  // bitmap through the decoder off the paint path, so the first time the
+  // image becomes visible it appears in one instant flip — no progressive
+  // "split" render, no flash of the previous screen.
+  const handleImageLoad = async (e) => {
+    const el = e.currentTarget;
+    try {
+      if (el.decode) await el.decode();
+    } catch {
+      // decode() can reject when interrupted — the load event is authoritative
+    }
+    setImageReady(true);
+  };
+
+  // The image view is only painted once the bitmap is fully decoded.
+  const showingImage = activeImage && !showDefault && imageReady;
 
   // ── render ──────────────────────────────────────────────────────────────
 
@@ -215,55 +234,68 @@ export default function App() {
         {/* No horizontal separator — original used line.png only as vertical
             column edges via .bordered CSS (Asset 2.jpg was broken/404 there) */}
 
-        {showingDefault ? (
-          /* ══════ Default view: zmanim | parsha + clock | prayers ══════ */
-          <div className="row ps-5 pe-5 mt-4 flex-grow-1 mb-3">
+        {/* Default view — ALWAYS MOUNTED. It is never torn down; the holiday
+            image simply covers it (absolute, z-index 10). The previous
+            conditional-render approach unmounted/remounted this entire tree
+            on every flip: from-scratch render + layout each time, and an
+            empty flash while React rebuilt the DOM on the flip back. */}
+        <div className="row ps-5 pe-5 mt-4 flex-grow-1 mb-3">
 
-            <div className="bordered col-4 d-flex flex-column p-3 pb-5 pe-5 justify-content-between">
-              {zmanimTimes.map(z => (
-                <div key={z.name} className="d-flex flex-row justify-content-between h1">
-                  <span>{z.name}</span>
-                  <span>{z.time}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="bordered col-4 d-flex flex-column text-center justify-content-between">
-              <div className="d-flex flex-column">
-                <span className="h1 col-12 text-center mb-0">פרשת השבוע</span>
-                {reading.text && (
-                  <span className="col-12 text-center red special-text">{reading.text}</span>
-                )}
+          {/* ══════ Default view: zmanim | parsha + clock | prayers ══════ */}
+          <div className="bordered col-4 d-flex flex-column p-3 pb-5 pe-5 justify-content-between">
+            {zmanimTimes.map(z => (
+              <div key={z.name} className="d-flex flex-row justify-content-between h1">
+                <span>{z.name}</span>
+                <span>{z.time}</span>
               </div>
-              <span id="clock">{clock}</span>
-            </div>
-
-            <div className="bordered col-4 d-flex flex-column p-3 pb-5 justify-content-between">
-              {prayers.map(p => (
-                <div key={p.id ?? p.name} className="d-flex flex-column align-items-center">
-                  <span className="h1 mb-0">{p.name}</span>
-                  <span className="h2 prayer-time">{p.time}</span>
-                </div>
-              ))}
-            </div>
+            ))}
           </div>
-        ) : (
-          /* ══════ Image view (holiday schedule) — full screen ══════ */
-          activeImage && (
-            <img
-              src={activeImage.imageUrl}
-              alt={activeImage.name || ''}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100vw',
-                height: '100vh',
-                objectFit: 'fill',
-                zIndex: 10,
-              }}
-            />
-          )
+
+          <div className="bordered col-4 d-flex flex-column text-center justify-content-between">
+            <div className="d-flex flex-column">
+              <span className="h1 col-12 text-center mb-0">פרשת השבוע</span>
+              {reading.text && (
+                <span className="col-12 text-center red special-text">{reading.text}</span>
+              )}
+            </div>
+            <span id="clock">{clock}</span>
+          </div>
+
+          <div className="bordered col-4 d-flex flex-column p-3 pb-5 justify-content-between">
+            {prayers.map(p => (
+              <div key={p.id ?? p.name} className="d-flex flex-column align-items-center">
+                <span className="h1 mb-0">{p.name}</span>
+                <span className="h2 prayer-time">{p.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ══════ Holiday image (e.g. Rosh Hashana schedule) — full screen ══════
+            Stays mounted the whole time it is scheduled, so the browser
+            downloads and decodes it in the background during the default view
+            and keeps the decoded bitmap across flips: no re-download, no
+            re-decode, instant paint. Only its visibility flips. */}
+        {activeImage && (
+          <img
+            key={activeImage.imageUrl}
+            data-view="holiday-image"
+            src={activeImage.imageUrl}
+            alt={activeImage.name || ''}
+            fetchPriority="high"
+            onLoad={handleImageLoad}
+            onError={() => setImageReady(false)}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              objectFit: 'fill',
+              zIndex: 10,
+              visibility: showingImage ? 'visible' : 'hidden',
+            }}
+          />
         )}
 
       </div>
