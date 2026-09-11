@@ -1,19 +1,21 @@
 /**
  * Service worker for synagogue-screen.
  *
- * Caches the current index.html and polls for new deployments every hour.
- * When the hashed asset filenames change, the SW updates and tells all
- * clients to reload so the display always runs the latest version.
+ * Polls for new deployments: fetches index.html from the origin (cache:
+ * no-store, with a cache-busting query), compares the hashed asset
+ * filenames, and when they change the SW updates and tells all clients
+ * to reload so the display always runs the latest version.
  */
 
-const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 let currentMainJs = null;
 let currentMainCss = null;
 
 /** Extract the hashed main JS and CSS filenames from index.html */
 async function extractAssetHashes(url) {
-  const response = await fetch(url, { cache: 'no-store' });
+  // cache-busting query: bypass any intermediate cache (CloudFront, proxies)
+  const response = await fetch(`${url}?v=${Date.now()}`, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
@@ -46,6 +48,11 @@ async function checkForUpdate() {
 
     if (hasUpdate) {
       console.log('[SW] new version detected, updating...');
+      // Refresh our baseline BEFORE skipWaiting(): after the old SW dies and
+      // this one takes over, we compare against the NEW hashes, not the ones
+      // cached at install time (which may have been read from a stale edge).
+      currentMainJs = latest.js;
+      currentMainCss = latest.css;
       await self.skipWaiting();
       await self.clients.claim();
       await notifyClientsToReload();
@@ -69,7 +76,15 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   console.log('[SW] activate');
-  event.waitUntil(self.clients.claim());
+  // Re-read the hashes on activation too — install-time fetches can be
+  // served from a stale CloudFront edge cache right after a deploy.
+  event.waitUntil(
+    extractAssetHashes('/index.html').then((hashes) => {
+      currentMainJs = hashes.js;
+      currentMainCss = hashes.css;
+      self.clients.claim();
+    })
+  );
 });
 
 self.addEventListener('message', (event) => {
