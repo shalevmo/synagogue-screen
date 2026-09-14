@@ -290,7 +290,7 @@ console.log('══ 21. Holiday-Shabbat readings via @hebcal/leyning (not קרי
   check('RH d1 Shabbat → ראש השנה א׳', r(at10(2026, 9, 12)).text === 'ראש השנה א׳');
   check('Sukkot d1 Shabbat → סוכות יום א׳ (ktiv male)', r(at10(2026, 9, 26)).text === 'סוכות יום א׳');
   check('SA/ST Shabbat → שמחת תורה', r(at10(2026, 10, 3)).text === 'שמחת תורה');
-  check('CHM Pesach Shabbat → שבת חל המועד פסח', r(at10(2027, 4, 23)).text === 'שבת חל המועד פסח');
+  check('CHM Pesach Shabbat → שבת חול המועד פסח (ktiv male)', r(at10(2027, 4, 23)).text === 'שבת חול המועד פסח');
   check('YK Shabbat (2028) → יום כיפור (ktiv male)', r(at10(2028, 9, 28)).text === 'יום כיפור');
   check('regular Shabbat stays parsha (Haazinu)', r(at10(2026, 9, 19)).text === 'פרשת האזינו');
 }

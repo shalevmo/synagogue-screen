@@ -1,4 +1,4 @@
-import { HDate, HebrewCalendar } from '@hebcal/core';
+import { HDate, HebrewCalendar, Locale } from '@hebcal/core';
 import { getLeyningOnDate } from '@hebcal/leyning';
 
 /**
@@ -13,20 +13,18 @@ export function stripNikkud(text) {
 
 /**
  * The reading to display for a holiday Shabbat (no weekly parsha read that
- * day). Uses @hebcal/leyning's getLeyningOnDate — the real reading (e.g.
- * סוכות יום א׳) instead of the generic קריאת החג. The (בשבת) suffix hebcal
- * appends when the holiday falls on Shabbat is dropped — the screen shows
- * this on Shabbat anyway, so it is redundant.
+ * day). Uses @hebcal/leyning's getLeyningOnDate for the real reading name
+ * (e.g. סוכות יום א׳) instead of the generic קריאת החג.
  *
- * Leyning names are ktiv haser (סכות, כפור) — the screen's locked
- * convention is ktiv male (matching core's he-x-NoNikud), so the two known
- * haser forms are normalized.
+ * Leyning hardcodes 'he' (ktiv haser) in its name builders — the language
+ * param never reaches the name — but it registers its own he-x-NoNikud
+ * translations into core's shared Locale registry on import. So: read the
+ * en key, re-look it up in he-x-NoNikud ourselves. Falls back to leyning's
+ * he name (plus stripNikkud) if the registry misses (e.g. future keys).
+ *
+ * The (בשבת) suffix hebcal appends when the holiday falls on Shabbat is
+ * dropped — the screen shows this on Shabbat anyway, so it is redundant.
  */
-const KTIV_MALE = [
-  [/סכות/g, 'סוכות'],
-  [/כפור/g, 'כיפור'],
-];
-
 function holidayReadingName(hd) {
   let reading;
   try {
@@ -34,13 +32,14 @@ function holidayReadingName(hd) {
   } catch {
     return null;
   }
-  if (!reading || !reading.name || !reading.name.he) return null;
-  let t = stripNikkud(reading.name.he)
+  if (!reading || !reading.name || !reading.name.en) return null;
+  let t = Locale.lookupTranslation(reading.name.en, 'he-x-NoNikud');
+  if (!t) t = stripNikkud(reading.name.he || '');
+  if (!t) return null;
+  return t
     .replace(/\s*\(.*?\)\s*/g, ' ')   // (בשבת) etc.
     .replace(/\s{2,}/g, ' ')
     .trim();
-  for (const [re, rep] of KTIV_MALE) t = t.replace(re, rep);
-  return t;
 }
 
 /**
@@ -69,7 +68,7 @@ export function findShabbatReading(now, gloc, tzais) {
       il: true, location: gloc, sedrot: true,
     });
     for (const ev of cal) {
-      const hebrew = stripNikkud(ev.render('he') || '').trim();
+      const hebrew = ev.render('he-x-NoNikud') || stripNikkud(ev.render('he') || '');
       if (/^פרש[הת] /.test(hebrew)) {
         return { text: hebrew.replace(/\s*\(.*\)/, '').trim(), isHoliday: false };
       }
@@ -97,7 +96,7 @@ export function findShabbatReading(now, gloc, tzais) {
 
   if (cal) {
     for (const ev of cal) {
-      const hebrew = stripNikkud(ev.render('he') || '').trim();
+      const hebrew = ev.render('he-x-NoNikud') || stripNikkud(ev.render('he') || '');
       if (/^פרש[הת] /.test(hebrew)) {
         return { text: hebrew.replace(/\s*\(.*\)/, '').trim(), isHoliday: false };
       }
