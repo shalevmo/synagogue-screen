@@ -28,6 +28,11 @@ import { useEffect, useState, useRef } from 'react';
 import { doc, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
+/** Stable empty array: returning a literal `[]` from the hook would give App
+ * a fresh identity on every render, dragging the minute-bucketed display memo
+ * into a per-second recompute in the fallback (no-Firestore) config. */
+const EMPTY_IMAGES = [];
+
 /** Hard-coded defaults used when Firebase is unavailable or empty */
 export const DEFAULTS = {
   defaultViewDuration: 15,
@@ -155,7 +160,7 @@ export function useFirestoreData() {
   return {
     config: config || DEFAULTS,
     prayers: prayers || DEFAULTS.prayers,
-    images: images || [],
+    images: images ?? EMPTY_IMAGES,
     isConfigured: config != null,
     isImageActive,
   };
