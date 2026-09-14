@@ -108,11 +108,6 @@ function eventsForHDate(hd, gloc) {
   return [...HebrewCalendar.calendar({ start: hd, end: hd, il: true, location: gloc, omer: true })];
 }
 
-/** Day-of-week of a Hebrew date (0=Sun … 6=Shabbat), via local greg anchor */
-function dow(hd) {
-  return middayOf(hd).getDay();
-}
-
 /** Does this day's event list carry the CHAG flag (full Yom Tov, not CHM)? */
 function hasChag(evs) {
   return evs.some((ev) => ((ev.getFlags?.() ?? 0) & FLAG_CHAG) !== 0);
@@ -124,13 +119,6 @@ function fastOf(evs) {
   return evs.find((ev) => (ev.getCategories?.() ?? []).includes('fast')
     && ((ev.getFlags?.() ?? 0) & flags.EREV) === 0) || null;
 }
-
-/**
- * Is this day part of a Yom Tov flow (CHAG or CHM)? Plain Shabbat is its own
- * holiness layer and is NOT a block day — it never extends a Yom Tov.
- * Major fasts that are chag-like (Yom Kippur) count as block days so a
- * Shabbat flowing into Yom Kippur shows no havdalah (adjacent-holiness merge).
- */
 
 function shkiahOf(gloc, hd) {
   return new Zmanim(gloc, middayOf(hd)).shkiah();
@@ -195,8 +183,8 @@ export function computeEventLines(gloc, now) {
   // ── Fast block (Q9:A) ─────────────────────────────────────────────────────
   const fastEv = fastOf(evsToday);
   if (fastEv) {
-    const flags = fastEv.getFlags?.() ?? 0;
-    const isMajor = (flags & FLAG_MAJOR_FAST) !== 0;
+    const fastFlags = fastEv.getFlags?.() ?? 0;
+    const isMajor = (fastFlags & FLAG_MAJOR_FAST) !== 0;
     const isYK = isMajor && hasChag(evsToday); // YK is a chag; TB is not
     banners.push(cleanHebrew(fastEv));
 
@@ -209,11 +197,10 @@ export function computeEventLines(gloc, now) {
     } else {
       // Minor fasts (Tzom Gedalia, 10 Tevet, 17 Tamuz, Taanit Esther): dawn.
       // Or Hahaim alot (same model as the left column) — not hebcal's 16.1°.
-      const oh = orHahaim(gloc, middayOf(today));
-      timed.push({
-        label: 'תחילת הצום',
-        time: fmt(oh ? oh.alot : new Zmanim(gloc, middayOf(today)).alotHaShachar()),
-      });
+      // (Unreachable-null fallback removed — orHahaim never returns null at
+      // this latitude; a silent hebcal-16.1° substitution would be worse
+      // than a crash on a production screen.)
+      timed.push({ label: 'תחילת הצום', time: fmt(orHahaim(gloc, middayOf(today)).alot) });
     }
     timed.push({ label: 'סיום הצום', time: fmt(isYK ? havdalahAt(gloc, today) : fastEndAt(gloc, today)) });
   }
@@ -224,7 +211,7 @@ export function computeEventLines(gloc, now) {
   // member). Every in-period day shows the same pair: the period's entry
   // (candles of its eve) and its final exit (shkiah+32 of its last member).
   function holyOf(evs, hd) {
-    if (dow(hd) === 6) return true;                                // Shabbat
+    if (hd.getDay() === 6) return true;                           // Shabbat
     if (hasChag(evs)) return true;                                 // Yom Tov
     if (evs.some((ev) => (ev.getFlags?.() ?? 0) & flags.CHOL_HAMOED)) return true;
     return false;
@@ -242,7 +229,7 @@ export function computeEventLines(gloc, now) {
   const tomorrowContinues = continuesRun(evsTomorrow);
 
   // In-period: today is holy, or Shabbat flowing into a fast bridge (YK).
-  const inPeriod = todayHoly || (dow(today) === 6 && todayContinues);
+  const inPeriod = todayHoly || (today.getDay() === 6 && todayContinues);
 
   if (inPeriod) {
     // ── Walk back to the run's first member ────────────────────────────────
@@ -303,7 +290,7 @@ export function computeEventLines(gloc, now) {
       // Rabbah Friday) — tonight's candles lit from an existing flame, in
       // addition to the period pair. Skipped when the run starts today
       // (tonight's candles are already the pair's entry line).
-      if (dow(today) === 5 && start.abs() < today.abs()
+      if (today.getDay() === 5 && start.abs() < today.abs()
           && (tomorrowHoly || tomorrowContinues)) {
         timed.push({ label: 'הדלקת נרות', time: fmt(candlesAt(gloc, today)) });
       }
@@ -325,10 +312,10 @@ export function computeEventLines(gloc, now) {
       : havdalahAt(gloc, yesterday);
     if (now <= new Date(exitTime.getTime() + LINGER_MS)) {
       // Standalone fast (TB with no holy neighbour): the fast block already
-      // showed both instants — nothing to linger.
-      if (yesterdayContinues && back.abs() === yesterday.abs()) {
-        // no-op
-      } else {
+      // showed both instants — nothing to linger. (back === yesterday means
+      // the run was the lone fast day, so there is no pair to show.)
+      const standaloneFast = yesterdayContinues && back.abs() === yesterday.abs();
+      if (!standaloneFast) {
         const entryLabel = hasChag(eventsForHDate(back, gloc))
           ? 'כניסת החג'
           : 'הדלקת נרות';
