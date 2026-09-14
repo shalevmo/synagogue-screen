@@ -117,8 +117,11 @@ jobs:
           else
             NOTES="$NOTES\n\n❌ No Angular backup detected in the bucket."
           fi
-          printf '%b' "$NOTES" | gh release create "$TAG" "$ZIP_NAME" \
+          NOTES_FILE=$(mktemp)
+          printf '%b' "$NOTES" > "$NOTES_FILE"
+          gh release create "$TAG" "$ZIP_NAME" \
             --title "S3 bucket archive $TAG" \
             --target "$TARGET_SHA" \
+            --notes-file "$NOTES_FILE" \
             --draft
           echo "Draft release $TAG created with $ZIP_NAME" >> "$GITHUB_STEP_SUMMARY"
