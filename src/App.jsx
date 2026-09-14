@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { HDate, Location, Zmanim } from '@hebcal/core';
 import { useFirestoreData } from './hooks/useFirestore';
 import { stripNikkud, findShabbatReading } from './lib/reading';
@@ -133,42 +133,11 @@ function handleKeyDown(e) {
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 
-/** Design stage size — the layout is authored at exactly 1920×1080. */
-const STAGE_W = 1920;
-const STAGE_H = 1080;
-
-/** Scale the fixed 1920×1080 stage to fit the current viewport (uniform
- *  scale, centered via flex on #root). Recomputed on resize and on entering
- *  fullscreen (a short delay covers the viewport transition). */
-function useStageScale(ref) {
-  const apply = () => {
-    const el = ref.current;
-    if (!el) return;
-    const s = Math.min(
-      window.innerWidth / STAGE_W,
-      window.innerHeight / STAGE_H,
-    );
-    el.style.transform = s < 1 ? `scale(${s})` : '';
-  };
-  useEffect(() => {
-    apply();
-    window.addEventListener('resize', apply);
-    document.addEventListener('fullscreenchange', () => setTimeout(apply, 100));
-    return () => {
-      window.removeEventListener('resize', apply);
-      document.removeEventListener('fullscreenchange', apply);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-}
-
 export default function App() {
   const { config, prayers, images } = useFirestoreData();
   const [now, setNow] = useState(() => new Date());
   const [showDefault, setShowDefault] = useState(true);
   const [imageReady, setImageReady] = useState(false);
-  const wrapperRef = useRef(null);
-  useStageScale(wrapperRef);
 
   // Build Location object from config (memoized — no effect or extra state)
   const gloc = useMemo(() => {
@@ -260,7 +229,6 @@ export default function App() {
 
   return (
     <div
-      ref={wrapperRef}
       id="content-wrapper"
       role="button"
       tabIndex={0}
