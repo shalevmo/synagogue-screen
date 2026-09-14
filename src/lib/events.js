@@ -43,7 +43,7 @@
  *  - Layout (Q4:C): banners first, then timed lines; all black.
  */
 
-import { HDate, HebrewCalendar, Zmanim } from '@hebcal/core';
+import { HDate, HebrewCalendar, Zmanim, flags } from '@hebcal/core';
 import { stripNikkud } from './reading.js';
 import { orHahaim } from './zmanim.js';
 
@@ -53,9 +53,11 @@ const CANDLE_OFFSET_MIN = -18;
 const HAVDALAH_OFFSET_MIN = 32;   // also fast end
 const LINGER_MS = 60 * 60 * 1000; // exit lines stay 1h past their time
 
-// hebcal flag bits (verified against @hebcal/core 6.6.0)
-const FLAG_CHAG = 1;
-const FLAG_MAJOR_FAST = 0x4000;   // Yom Kippur, Tisha B'Av
+// Named flags from @hebcal/core (verified identical to the raw hex values
+// previously hardcoded: CHAG=1, MAJOR_FAST=0x4000, EREV=0x100000,
+// CHOL_HAMOED=0x200000 — cross-checked against core 6.9.2's event flags)
+const FLAG_CHAG = flags.CHAG;
+const FLAG_MAJOR_FAST = flags.MAJOR_FAST;   // Yom Kippur, Tisha B'Av
 
 // ─── formatting ──────────────────────────────────────────────────────────────
 
@@ -119,9 +121,8 @@ function hasChag(evs) {
 /** Is this day a fast day? Returns the event or null. Erev-fasts (e.g. hebcal's
  * "Erev Tish'a B'Av" marker on 8 Av) are NOT the fast itself — excluded. */
 function fastOf(evs) {
-  const EREV = 0x100000;
   return evs.find((ev) => (ev.getCategories?.() ?? []).includes('fast')
-    && ((ev.getFlags?.() ?? 0) & EREV) === 0) || null;
+    && ((ev.getFlags?.() ?? 0) & flags.EREV) === 0) || null;
 }
 
 /**
@@ -225,7 +226,7 @@ export function computeEventLines(gloc, now) {
   function holyOf(evs, hd) {
     if (dow(hd) === 6) return true;                                // Shabbat
     if (hasChag(evs)) return true;                                 // Yom Tov
-    if (evs.some((ev) => (ev.getFlags?.() ?? 0) & 0x200000)) return true; // CHM
+    if (evs.some((ev) => (ev.getFlags?.() ?? 0) & flags.CHOL_HAMOED)) return true;
     return false;
   }
   function continuesRun(evs) {  // major fast (YK / Tisha B'Av) bridges a run
