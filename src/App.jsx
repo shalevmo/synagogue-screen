@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { HDate, Location, Zmanim } from '@hebcal/core';
 import { useFirestoreData } from './hooks/useFirestore';
 import { stripNikkud, findShabbatReading } from './lib/reading';
+import { needsImageReset } from './lib/slideshow';
 import './index.css';
 
 // ─── zmanim keys (unchanged) ──────────────────────────────────────────────────
@@ -164,15 +165,20 @@ export default function App() {
   );
   const clock = CLOCK_FMT.format(now);
 
-  // When the active image changes (e.g. the Rosh Hashana poster activates),
-  // restart from the default view. The new image is never displayed until it
-  // has fully downloaded AND decoded (see handleImageLoad) — a progressive /
-  // half-painted image is never shown, and the default view keeps running
-  // underneath in the meantime. Adjusting state during render is the
-  // documented React pattern for reacting to changed values.
-  const [prevImage, setPrevImage] = useState(activeImage);
-  if (activeImage !== prevImage) {
-    setPrevImage(activeImage);
+  // When the image being displayed changes (URL is the identity that matters —
+  // the <img> below is keyed by imageUrl), restart from the default view. The
+  // new image is never displayed until it has fully downloaded AND decoded
+  // (see handleImageLoad) — a progressive / half-painted image is never shown,
+  // and the default view keeps running underneath in the meantime. Adjusting
+  // state during render is the documented React pattern for reacting to
+  // changed values. Logic lives in lib/slideshow.js (needsImageReset) —
+  // compare by imageUrl, NOT doc identity: schedules split across year
+  // boundaries share one URL, and resetting on a doc switch re-arms the
+  // decode gate with no load event to clear it (RH 5787 incident).
+  const nextUrl = activeImage?.imageUrl ?? null;
+  const [prevImageUrl, setPrevImageUrl] = useState(nextUrl);
+  if (needsImageReset(prevImageUrl, activeImage)) {
+    setPrevImageUrl(nextUrl);
     setShowDefault(true);
     setImageReady(false);
   }
