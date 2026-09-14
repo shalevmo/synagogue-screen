@@ -11,25 +11,45 @@ export function stripNikkud(text) {
 }
 
 /**
- * Find the reading for the upcoming Shabbat.
+ * Find the reading to display.
  *
- * Regular weeks: the weekly parsha.
+ * On Shabbat (until tzais): TODAY's reading — the weekly parsha, or the
+ * holiday's reading when no parsha is read that day (locked with the
+ * gabbai, Sep 2026).
  *
- * Holiday weeks (Rosh Hashana, Yom Kippur on Shabbat, Sukkot I / CH''M,
- * Shmini Atzeret, Pesach…): no weekly parsha is read — hebcal emits no
- * ParshaEvent for those days, but it does emit the holiday itself, so we
- * show the holiday name as the reading. All computation is local
- * (@hebcal/core), no external APIs.
- *
- * Ultimate fallback (holiday event unexpectedly missing): the holiday
- * reading is shown as "קריאת החג ראש השנה" style text — with just the
- * generic label if even the holiday name is unavailable.
+ * All other days: the reading of the UPCOMING Shabbat (regular weeks: the
+ * weekly parsha; holiday Shabbatot: קריאת החג).
  *
  * @param {Date} now  reference "today"
  * @param {Location|null} gloc  optional Location (parity with old findParsha)
+ * @param {Date|null} tzais  today's tzais (Shabbat end); if omitted, the
+ *                          tzais check is skipped
  * @returns {{text: string, isHoliday: boolean}}
  */
-export function findShabbatReading(now, gloc) {
+export function findShabbatReading(now, gloc, tzais) {
+  // On Shabbat before tzais: today's reading.
+  if (now.getDay() === 6 && !(tzais && now > tzais)) {
+    const hd = new HDate(now);
+    const cal = HebrewCalendar.calendar({
+      start: hd, end: hd,
+      il: true, location: gloc, sedrot: true,
+    });
+    for (const ev of cal) {
+      const hebrew = stripNikkud(ev.render('he') || '').trim();
+      if (/^פרש[הת] /.test(hebrew)) {
+        return { text: hebrew.replace(/\s*\(.*\)/, '').trim(), isHoliday: false };
+      }
+    }
+    // Shabbat holiday with no parsha → the holiday's reading. Prefer the
+    // actual holiday name over the generic label when available.
+    const holiday = [...cal].find((ev) => ev.getCategories?.().includes('holiday'));
+    if (holiday) {
+      return { text: 'קריאת החג', isHoliday: true };
+    }
+    return { text: 'קריאת החג', isHoliday: true };
+  }
+
+  // Forward-looking: the upcoming Shabbat's reading.
   const dayOfWeek = now.getDay();
   const daysUntilShabbat = dayOfWeek === 6 ? 7 : 6 - dayOfWeek;
   const shabbat = new Date(now);
@@ -41,8 +61,6 @@ export function findShabbatReading(now, gloc) {
     il: true, location: gloc, sedrot: true,
   });
 
-  let holidayName = '';
-
   if (cal) {
     for (const ev of cal) {
       // Don't rely on constructor.name — it is mangled by minifiers.
@@ -50,14 +68,6 @@ export function findShabbatReading(now, gloc) {
       const hebrew = stripNikkud(ev.render('he') || '').trim();
       if (/^פרש[הת] /.test(hebrew)) {
         return { text: hebrew.replace(/\s*\(.*\)/, '').trim(), isHoliday: false };
-      }
-      // Remember the first holiday event seen (used only if no parsha is found).
-      const cats = ev.getCategories ? ev.getCategories() : [];
-      if (!holidayName && cats.includes('holiday')) {
-        holidayName = hebrew
-          .replace(/\s*\(.*\)/, '')    // English suffixes, e.g. "(CH''M)"
-          .replace(/\s*\d+\s*$/, '')   // trailing year, e.g. "ראש השנה 5787"
-          .trim();
       }
     }
   }
