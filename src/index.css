@@ -19,6 +19,17 @@ html, body, #root {
   overflow: hidden;
 }
 
+/* ── Fixed 1920×1080 stage ──
+   The design is authored at exactly 1920×1080. On any other viewport the
+   stage keeps its size and is scaled down uniformly (transform: scale) to
+   fit, so vh/vw units and the FHD layout stay pixel-identical to the real
+   kiosk. #root centers the scaled stage. */
+#root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 body {
   background-image: url('/background.jpg');
   background-repeat: no-repeat;
@@ -29,12 +40,29 @@ body {
 }
 
 #content-wrapper {
-  width: 100%;
-  height: 100%;
+  width: 1920px;
+  height: 1080px;
+  flex: 0 0 auto;
+  transform-origin: center center;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 11vh 9vw;
+}
+
+/* Holiday image fills the STAGE, not the viewport — it must cover exactly
+   the same area as the content. */
+.holiday-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 1080px;
+  object-fit: fill;
+  z-index: 10;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.5s ease-in-out, visibility 0.5s;
 }
 
 .bordered {
@@ -52,20 +80,8 @@ body {
    Crossfade between default view and holiday image: the image is always
    mounted on top; only its opacity animates (GPU-composited, cheap on the
    Pi). `visibility` participates in the same transition so the element
-   stays interactive-visible while fading and hides exactly at opacity 0. */
-.holiday-image {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: fill;
-  z-index: 10;
-  opacity: 1;
-  visibility: visible;
-  transition: opacity 0.5s ease-in-out, visibility 0.5s;
-}
-
+   stays interactive-visible while fading and hides exactly at opacity 0.
+   Sizing lives in the fixed-stage block above (1920×1080). */
 .holiday-image[data-hidden='true'] {
   opacity: 0;
   visibility: hidden;
