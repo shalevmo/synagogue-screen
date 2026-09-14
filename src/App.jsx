@@ -138,16 +138,27 @@ export default function App() {
   const [showDefault, setShowDefault] = useState(true);
   const [imageReady, setImageReady] = useState(false);
 
-  // Build Location object from config (memoized — no effect or extra state)
+  // Build Location object from config (memoized — no effect or extra state).
+  // Firestore owns this data: a bad `location` doc (garbage lat or timezone)
+  // would throw inside every zmanim memo and white-screen the kiosk. Validate
+  // by construction — smoke-run a sunrise once per config change and fall
+  // back to the Netivot default if it throws.
   const gloc = useMemo(() => {
     const loc = config.location || {};
-    return new Location(
-      loc.lat ?? 31.42215,
-      loc.lng ?? 34.58858,
-      true,
-      loc.timezone ?? 'Asia/Jerusalem',
-      loc.elevation ?? 0,
-    );
+    try {
+      const candidate = new Location(
+        loc.lat ?? 31.42215,
+        loc.lng ?? 34.58858,
+        true,
+        loc.timezone ?? 'Asia/Jerusalem',
+        loc.elevation ?? 0,
+      );
+      new Zmanim(candidate, new HDate()).sunrise(); // smoke-test: validates tz + coords
+      return candidate;
+    } catch {
+      console.warn('Bad config.location, falling back to Netivot default');
+      return new Location(31.42215, 34.58858, true, 'Asia/Jerusalem', 0);
+    }
   }, [config.location]);
 
   // Single ticker: the only state this component owns besides the view toggle.
