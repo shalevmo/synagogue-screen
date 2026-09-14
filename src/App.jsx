@@ -3,6 +3,7 @@ import { HDate, Location, Zmanim } from '@hebcal/core';
 import { useFirestoreData } from './hooks/useFirestore';
 import { stripNikkud, findShabbatReading } from './lib/reading';
 import { needsImageReset } from './lib/slideshow';
+import { computeEventLines } from './lib/events';
 import './index.css';
 
 // ─── zmanim keys (unchanged) ──────────────────────────────────────────────────
@@ -100,7 +101,8 @@ function computeDisplayData(gloc, images, now) {
 
   // Parsha — or the holiday reading when no regular parsha is read
   // (Rosh Hashana / Yom Kippur / Sukkot / Shmini Atzeret / Pesach Shabbats).
-  const reading = findShabbatReading(now, gloc);
+  // On Shabbat itself (before tzais): today's reading, not next week's.
+  const reading = findShabbatReading(now, gloc, tzaisAt);
 
   // Active image based on Hebrew date (displayHd has the correct date)
   const hMonth = displayHd.getMonth();        // 1‑based (1=Tishrei, 7=Nisan)
@@ -164,6 +166,13 @@ export default function App() {
     [gloc, images, minute],
   );
   const clock = CLOCK_FMT.format(now);
+
+  // Holiday/event lines for the center column — same minute-bucket cadence as
+  // the other heavy date math. Pure computation during render.
+  const { banners, timed } = useMemo(
+    () => computeEventLines(gloc, now),
+    [gloc, minute], // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   // When the image being displayed changes (URL is the identity that matters —
   // the <img> below is keyed by imageUrl), restart from the default view. The
@@ -264,6 +273,22 @@ export default function App() {
                 <span className="col-12 text-center red special-text">{reading.text}</span>
               )}
             </div>
+
+            {/* Holiday & event lines (banners first, then timed) */}
+            {(banners.length > 0 || timed.length > 0) && (
+              <div className="d-flex flex-column event-panel">
+                {banners.map((b, i) => (
+                  <span key={`b-${i}`} className="h1 event-line event-banner">{b}</span>
+                ))}
+                {timed.map((t, i) => (
+                  <div key={`t-${i}`} className="d-flex flex-row justify-content-center event-line">
+                    <span className="h1">{t.label}</span>
+                    <span className="h1">{t.time}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <span id="clock">{clock}</span>
           </div>
 

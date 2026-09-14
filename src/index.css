@@ -88,6 +88,42 @@ span {
   font-size: 6.7vh;
 }
 
+/* ── Holiday & event lines (center column, between parsha and clock) ──
+   Layout locked with the gabbai (Sep 2026): banners are name-only lines,
+   timed lines are label + time side by side. All black (Q4:C + "black").
+   Sizing locked Sep 14 2026: h1 (5vh) everywhere, aligned with the right
+   (zmanim) column's times. No per-line overrides. */
+.event-panel {
+  flex: 0 0 auto;
+  margin-top: 1.5vh;
+  gap: 0.8vh;
+}
+
+.event-line {
+  color: black;
+}
+
+.event-banner {
+  font-size: inherit;
+}
+
+.event-line .h2,
+.event-line span.h2 {
+  font-size: inherit;
+}
+
+/* Timed lines: label right, time left (rtl), mirroring the zmanim column's
+   justify-between — but centered as a group per the locked layout. */
+.event-line.d-flex {
+  gap: 1.2rem;
+  width: 100%;
+  padding: 0 1.5rem;
+}
+
+.event-line.d-flex span:last-child {
+  font-variant-numeric: tabular-nums;
+}
+
 .red {
   color: #751a1b;
 }
