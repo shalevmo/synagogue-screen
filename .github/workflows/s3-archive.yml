@@ -1,0 +1,124 @@
+name: S3 Bucket Archive & Angular Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      s3_prefix:
+        description: "Optional S3 prefix (folder) to archive instead of the whole bucket"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: write   # create draft release to hold the zip artifact
+  id-token: write   # (available if AWS creds ever switch to OIDC)
+
+jobs:
+  archive-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: List bucket contents
+        env:
+          BUCKET: ${{ secrets.S3_BUCKET }}
+          PREFIX: ${{ inputs.s3_prefix }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$PREFIX" ]]; then
+            TARGET="s3://$BUCKET/$PREFIX"
+          else
+            TARGET="s3://$BUCKET"
+          fi
+          echo "Archiving: $TARGET"
+          aws s3 ls "$TARGET" --recursive --human-readable
+
+      - name: Download and zip bucket contents
+        id: zip
+        env:
+          BUCKET: ${{ secrets.S3_BUCKET }}
+          PREFIX: ${{ inputs.s3_prefix }}
+        run: |
+          set -euo pipefail
+          mkdir -p bucket-contents
+          if [[ -n "$PREFIX" ]]; then
+            aws s3 sync "s3://$BUCKET/$PREFIX" bucket-contents/
+          else
+            aws s3 sync "s3://$BUCKET" bucket-contents/
+          fi
+          FILE_COUNT=$(find bucket-contents -type f | wc -l)
+          echo "Downloaded $FILE_COUNT files"
+
+          STAMP=$(date -u +%Y%m%d-%H%M%S)
+          ZIP_NAME="s3-bucket-backup-$STAMP.zip"
+          (cd bucket-contents && zip -qr "../$ZIP_NAME" .)
+          SIZE=$(du -h "$ZIP_NAME" | cut -f1)
+          {
+            echo "zip_name=$ZIP_NAME"
+            echo "file_count=$FILE_COUNT"
+            echo "zip_size=$SIZE"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "### S3 archive created"
+            echo "- **File:** \`$ZIP_NAME\`"
+            echo "- **Size:** $SIZE ($FILE_COUNT files)"
+          } >> "$GITHUB_STEP_SUM"
+
+      - name: Check for Angular backup of old website
+        id: angular
+        run: |
+          set -euo pipefail
+          markers=()
+          shopt -s globstar nullglob
+          # Markers in built JS bundles / index.html (compiled Angular app)
+          for f in bucket-contents/**/*.js bucket-contents/index.html; do
+            if grep -lqi 'ng-version\|ng-server-context\|zone\.js' "$f" 2>/dev/null; then
+              markers+=("$f")
+            fi
+          done
+          # A source backup would ship package.json with @angular/* deps
+          for f in bucket-contents/**/package.json; do
+            if grep -q '"@angular/' "$f" 2>/dev/null; then
+              markers+=("$f")
+            fi
+          done
+          SUMMARY=""
+          if (( ${#markers[@]} )); then
+            SUMMARY="### ✅ Angular backup FOUND\\n"
+            for m in "${markers[@]}"; do
+              SUMMARY+="- \`$m\`\\n"
+              echo "Angular marker: $m"
+            done
+            echo "angular_found=true" >> "$GITHUB_OUTPUT"
+          else
+            SUMMARY="### ❌ No Angular backup in bucket\\n"
+            echo "angular_found=false" >> "$GITHUB_OUTPUT"
+          fi
+          printf '%b' "$SUMMARY" >> "$GITHUB_STEP_SUM"
+
+      - name: Upload archive as draft release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TARGET_SHA: ${{ github.sha }}
+          ZIP_NAME: ${{ steps.zip.outputs.zip_name }}
+          ANGULAR_FOUND: ${{ steps.angular.outputs.angular_found }}
+        run: |
+          set -euo pipefail
+          TAG="s3-archive-$(date -u +%Y%m%d-%H%M%S)"
+          NOTES="Automated archive of the S3 bucket ($ZIP_NAME)."
+          if [[ "$ANGULAR_FOUND" == "true" ]]; then
+            NOTES="$NOTES\n\n✅ Angular backup of the old website detected."
+          else
+            NOTES="$NOTES\n\n❌ No Angular backup detected in the bucket."
+          fi
+          printf '%b' "$NOTES" | gh release create "$TAG" "$ZIP_NAME" \
+            --title "S3 bucket archive $TAG" \
+            --target "$TARGET_SHA" \
+            --draft
+          echo "Draft release $TAG created with $ZIP_NAME" >> "$GITHUB_STEP_SUM"
