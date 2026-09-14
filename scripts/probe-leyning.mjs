@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Jerusalem';
 // Probe @hebcal/leyning getLeyningOnDate for holiday-Shabbat anchors.
 import { HDate } from '@hebcal/hdate';
 import { getLeyningOnDate } from '@hebcal/leyning';

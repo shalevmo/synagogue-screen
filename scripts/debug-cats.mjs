@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Jerusalem';
 import { HDate, HebrewCalendar } from '@hebcal/core';
 
 for (let abs = new HDate(24, 9, 5787).abs(); abs <= new HDate(4, 10, 5787).abs(); abs++) {

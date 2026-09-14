@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Jerusalem';
 // Enumerate Shabbat-holiday readings across years: stripped-leyning name vs
 // core event name (he-x-NoNikud, ktiv male). Find every ktiv divergence.
 import { HDate, HebrewCalendar } from '@hebcal/core';

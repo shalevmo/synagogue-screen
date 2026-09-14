@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Jerusalem';
 // Shabbat Chanukah + Rosh Chodesh Tevet: happens when Shabbat falls on
 // 30 Kislev (day 6, 30-day Kislev) or 1 Tevet (day 6 or 7). Scan 5787..5810.
 import { HDate, HebrewCalendar } from '@hebcal/core';

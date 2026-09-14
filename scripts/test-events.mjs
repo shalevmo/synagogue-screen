@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Jerusalem';
 /**
  * Edge-case battery for src/lib/events.js — validates the locked rule set
  * against the REAL 5787 calendar (anchors derived from HDate.abs() ground

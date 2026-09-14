@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Jerusalem';
 /**
  * Pin scripts/src/lib/zmanim.js (Or Hahaim model) against 2net's own אור החיים
  * tables for Netivot (5 anchor dates across the year, incl. solstices).

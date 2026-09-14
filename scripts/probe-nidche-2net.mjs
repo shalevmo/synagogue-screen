@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Jerusalem';
 // Pull 2net Netivot nidche Tisha B'Av 5789 times (9 Av = Shabbat 21 Jul 2029,
 // fast observed Sunday 22 Jul) under the אור החיים method — checking what
 // תחילת הצום 2net prints for the nidche case (shkiah vs tzais Motzei Shabbat).

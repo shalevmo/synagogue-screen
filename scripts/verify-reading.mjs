@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Jerusalem';
 import { strict as assert } from 'node:assert';
 import { findShabbatReading, stripNikkud } from '../src/lib/reading.js';
 
