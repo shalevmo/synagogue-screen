@@ -67,7 +67,7 @@ jobs:
             echo "### S3 archive created"
             echo "- **File:** \`$ZIP_NAME\`"
             echo "- **Size:** $SIZE ($FILE_COUNT files)"
-          } >> "$GITHUB_STEP_SUM"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check for Angular backup of old website
         id: angular
@@ -99,7 +99,7 @@ jobs:
             SUMMARY="### ❌ No Angular backup in bucket\\n"
             echo "angular_found=false" >> "$GITHUB_OUTPUT"
           fi
-          printf '%b' "$SUMMARY" >> "$GITHUB_STEP_SUM"
+          printf '%b' "$SUMMARY" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload archive as draft release asset
         env:
@@ -121,4 +121,4 @@ jobs:
             --title "S3 bucket archive $TAG" \
             --target "$TARGET_SHA" \
             --draft
-          echo "Draft release $TAG created with $ZIP_NAME" >> "$GITHUB_STEP_SUM"
+          echo "Draft release $TAG created with $ZIP_NAME" >> "$GITHUB_STEP_SUMMARY"
