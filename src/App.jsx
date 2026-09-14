@@ -4,20 +4,21 @@ import { useFirestoreData } from './hooks/useFirestore';
 import { stripNikkud, findShabbatReading } from './lib/reading';
 import { needsImageReset } from './lib/slideshow';
 import { computeEventLines } from './lib/events';
+import { orHahaim } from './lib/zmanim.js';
 import './index.css';
 
-// ─── zmanim keys (unchanged) ──────────────────────────────────────────────────
+// ─── left-column zmanim rows (Or Hahaim, locked "A" — see lib/zmanim.js) ──────
 
-const ZMANIM_ALL = [
-  { fn: 'alotHaShachar',   name: 'עלות השחר' },
-  { fn: 'neitzHaChama',    name: 'זריחה' },
-  { fn: 'sofZmanShmaMGA',  name: 'סו״ז שמע מג״א' },
-  { fn: 'sofZmanShma',     name: 'סו״ז שמע גר״א' },
-  { fn: 'sofZmanTfillaMGA',name: 'סו״ז תפילה מג״א' },
-  { fn: 'sofZmanTfilla',   name: 'סו״ז תפילה גר״א' },
-  { fn: 'chatzot',         name: 'חצות' },
-  { fn: 'shkiah',          name: 'שקיעה' },
-  { fn: 'tzaisBaalHatanya',name: 'צאת הכוכבים' },
+const ZMANIM_ROWS = [
+  { key: 'alot',    name: 'עלות השחר' },
+  { key: 'sunrise', name: 'זריחה' },
+  { key: 'shmaMGA', name: 'סו״ז שמע מג״א' },
+  { key: 'shmaGRA', name: 'סו״ז שמע גר״א' },
+  { key: 'tefMGA',  name: 'סו״ז תפילה מג״א' },
+  { key: 'tefGRA',  name: 'סו״ז תפילה גר״א' },
+  { key: 'chatzot', name: 'חצות' },
+  { key: 'shkiah',  name: 'שקיעה' },
+  { key: 'tzais',   name: 'צאת הכוכבים' },
 ];
 
 // ─── module-scope Intl formatters (hoisted: construction is expensive) ────────
@@ -73,6 +74,9 @@ function computeDisplayData(gloc, images, now) {
   const z = new Zmanim(gloc, now);
 
   // Jewish date in header
+  // Day-flip tzeit: hebcal's default 8.5° — locked in
+  // docs/adr/0001-day-flip-tzais-85.md; must stay the same call the event
+  // panel uses (lib/events.js) so header and panel flip inseparably.
   const tzaisAt = z.tzeit();
   const isAfterTzais = tzaisAt && now > tzaisAt;
   const displayHd = isAfterTzais
@@ -88,16 +92,11 @@ function computeDisplayData(gloc, images, now) {
   const yyyy = now.getFullYear();
   const dayAndDate = `${dow}\u00a0|\u00a0${dd}/${mm}/${yyyy}`;
 
-  // Zmanim
-  const zmanimTimes = ZMANIM_ALL.map(({ fn, name }) => {
-    let val = '';
-    try {
-      val = fmt(z[fn]());
-    } catch {
-      // certain zmanim may not exist for this location/date — leave blank
-    }
-    return { name, time: val };
-  });
+  // Zmanim — Or Hahaim (left column follows the community's convention)
+  const oh = orHahaim(gloc, now);
+  const zmanimTimes = oh
+    ? ZMANIM_ROWS.map(({ key, name }) => ({ name, time: fmt(oh[key]) }))
+    : ZMANIM_ROWS.map(({ name }) => ({ name, time: '' }));
 
   // Parsha — or the holiday reading when no regular parsha is read
   // (Rosh Hashana / Yom Kippur / Sukkot / Shmini Atzeret / Pesach Shabbats).

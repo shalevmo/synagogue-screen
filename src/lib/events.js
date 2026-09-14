@@ -6,14 +6,18 @@
  * Conventions (locked with the gabbai, Sep 2026):
  *  - Times follow the "Or Hahaim" convention used by calendar.2net.co.il
  *    (the calendar the community follows): candles = shkiah − 18 min,
- *    havdalah & fast end = shkiah + 32 min (hebcal terms; 2net's sunset runs
+ *    havdalah = shkiah + 32 min (hebcal terms; 2net's sunset runs
  *    ~2 min earlier — verified against 2net's published Netivot 5787 table).
+ *    Regular fast days end at the Or Hahaim tzais (lib/zmanim.js — the left
+ *    column's צאת הכוכבים); Yom Kippur ends at the havdalah instant
+ *    (shkiah+32). Locked with the gabbai, Sep 14 2026.
  *  - Labels (Q8:B): הדלקת נרות / הבדלה for Shabbat, כניסת החג / יציאת החג for
  *    Yom Tov (chag label wins when a day is both).
  *  - Fast days (Q9:A): name banner + תחילת הצום + סיום הצום. Minor fasts:
- *    dawn (alot) → shkiah+32. Yom Kippur starts at the erev candle-lighting
- *    time (shkiah−18), Tisha B'Av at shkiah itself. On Yom Kippur the exit
- *    line is suppressed — סיום הצום *is* the havdalah (same instant).
+ *    Or Hahaim dawn (alot) → Or Hahaim tzais. Yom Kippur starts at the erev
+ *    candle-lighting time (shkiah−18), Tisha B'Av at shkiah itself. On
+ *    Yom Kippur the exit line is suppressed — סיום הצום *is* the havdalah
+ *    (same instant).
  *  - Fixed pair per holy period (locked "B", Sep 14 2026): from the first
  *    night through the whole chag/Shabbat, the panel shows ONE pair — the
  *    period's entry time (candles of its eve) and the period's final exit
@@ -41,6 +45,7 @@
 
 import { HDate, HebrewCalendar, Zmanim } from '@hebcal/core';
 import { stripNikkud } from './reading.js';
+import { orHahaim } from './zmanim.js';
 
 // ─── Or Hahaim offsets (minutes, relative to @hebcal/core shkiah) ─────────────
 
@@ -53,6 +58,11 @@ const FLAG_CHAG = 1;
 const FLAG_MAJOR_FAST = 0x4000;   // Yom Kippur, Tisha B'Av
 
 // ─── formatting ──────────────────────────────────────────────────────────────
+
+/** Banner exclusions (locked with the gabbai, Sep 14 2026): very minor days
+ *  tied to specific ethnic customs stay off the shul screen. חג הבנות
+ *  (Eid el-Banat, 30 Kislev) is hebcal-reported but filtered on request. */
+const BANNER_EXCLUDE = new Set(['חג הבנות']);
 
 const TIME_FMT = new Intl.DateTimeFormat('en-US', {
   hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Jerusalem',
@@ -71,6 +81,12 @@ function cleanHebrew(ev) {
   let t = stripNikkud(ev.render('he-x-NoNikud') || ev.render('he') || '');
   t = t.replace(/\s*\(\u05D7\u05D5\u05D4\u05F4\u05DE\)/g, '');   // (חוה״מ)
   t = t.replace(/\s*\((.*?)\)/g, ' $1');                         // keep suffixes
+  // Nidche Tisha B'Av: hebcal's locale string is malformed —
+  // "(תשעה באב (נדחה" (two opens, no close, so the rules above miss it).
+  // Gabbai decision (Sep 2026): drop the נדחה marker and any stray parens
+  // entirely → plain "תשעה באב".
+  t = t.replace(/\s*\u05E0\u05D3\u05D7\u05D4/g, '');              // נדחה
+  t = t.replace(/[()]/g, '');
   t = t.replace(/\s*\d+\s*$/, '');
   return t.replace(/\s{2,}/g, ' ').trim();
 }
@@ -127,6 +143,12 @@ function havdalahAt(gloc, hd) {
   return new Date(shkiahOf(gloc, hd).getTime() + HAVDALAH_OFFSET_MIN * 60000);
 }
 
+/** Fast end: Yom Kippur at havdalah (shkiah+32); every other fast at the
+ * Or Hahaim tzais (the left column's צאת הכוכבים). */
+function fastEndAt(gloc, hd) {
+  return new Date(orHahaim(gloc, middayOf(hd)).tzais.getTime());
+}
+
 /**
  * Compute the event lines for the center column.
  *
@@ -139,7 +161,9 @@ export function computeEventLines(gloc, now) {
   const timed = [];
 
   // Display day: after tzeit the header shows tomorrow — follow it exactly
-  // (same tzeit call as App.jsx's Jewish-date flip).
+  // (same tzeit call as App.jsx's Jewish-date flip; both use hebcal's
+  // default 8.5° — locked in docs/adr/0001-day-flip-tzais-85.md, distinct
+  // from the DISPLAYED Or Hahaim tzais).
   const tzaisNow = new Zmanim(gloc, now).tzeit();
   const isAfterTzais = tzaisNow && now > tzaisNow;
   const today = isAfterTzais ? new HDate(new HDate(now).abs() + 1) : new HDate(now);
@@ -162,6 +186,7 @@ export function computeEventLines(gloc, now) {
     }
     if (cats.includes('roshchodesh') || cats.includes('holiday')) {
       const t = cleanHebrew(ev);           // Yom Tov, erev, CHM, special Shabbatot, modern
+      if (BANNER_EXCLUDE.has(t)) continue; // gabbai-filtered noise (e.g. חג הבנות)
       if (!seen.has(t)) { seen.add(t); banners.push(t); }
     }
   }
@@ -182,12 +207,14 @@ export function computeEventLines(gloc, now) {
       timed.push({ label: 'תחילת הצום', time: fmt(start) });
     } else {
       // Minor fasts (Tzom Gedalia, 10 Tevet, 17 Tamuz, Taanit Esther): dawn.
+      // Or Hahaim alot (same model as the left column) — not hebcal's 16.1°.
+      const oh = orHahaim(gloc, middayOf(today));
       timed.push({
         label: 'תחילת הצום',
-        time: fmt(new Zmanim(gloc, middayOf(today)).alotHaShachar()),
+        time: fmt(oh ? oh.alot : new Zmanim(gloc, middayOf(today)).alotHaShachar()),
       });
     }
-    timed.push({ label: 'סיום הצום', time: fmt(havdalahAt(gloc, today)) });
+    timed.push({ label: 'סיום הצום', time: fmt(isYK ? havdalahAt(gloc, today) : fastEndAt(gloc, today)) });
   }
 
   // ── Fixed pair per holy period (locked "B") ─────────────────────────────────
@@ -254,8 +281,22 @@ export function computeEventLines(gloc, now) {
       timed.push({ label: entryLabel, time: fmt(candlesAt(gloc, periodEve)) });
 
       // Exit: the run's final exit instant (last member incl. bridge).
-      const exitLabel = hasChag(eventsForHDate(end, gloc)) ? 'יציאת החג' : 'הבדלה';
-      timed.push({ label: exitLabel, time: fmt(havdalahAt(gloc, end)) });
+      // A trailing Tisha B'Av bridge ends at ITS fast end (OH tzais), with
+      // the fast label — YK keeps יציאת החג at havdalah (it is a chag).
+      // Gabbai decision (Sep 2026): a fast-bridged exit shows BOTH the
+      // fast's start and end on the days BEFORE the fast (Shabbat 9 Av
+      // nidche → the congregation sees when tonight's fast begins) —
+      // never a bare end line. The start follows the fast block's rule:
+      // TB begins at shkiah of the eve (the Motzei-Shabbat shkiah).
+      const endEvs = eventsForHDate(end, gloc);
+      const endIsFastBridge = continuesRun(endEvs) && !hasChag(endEvs);
+      if (endIsFastBridge) {
+        timed.push({ label: 'תחילת הצום', time: fmt(shkiahOf(gloc, new HDate(end.abs() - 1))) });
+        timed.push({ label: 'סיום הצום', time: fmt(fastEndAt(gloc, end)) });
+      } else {
+        const exitLabel = hasChag(endEvs) ? 'יציאת החג' : 'הבדלה';
+        timed.push({ label: exitLabel, time: fmt(havdalahAt(gloc, end)) });
+      }
 
       // Supplementary candles: Shabbat eve INSIDE a long run (e.g. Hoshana
       // Rabbah Friday) — tonight's candles lit from an existing flame, in
@@ -275,7 +316,12 @@ export function computeEventLines(gloc, now) {
       if (holyOf(prevEvs, prev) || continuesRun(prevEvs)) back = prev;
       else break;
     }
-    const exitTime = havdalahAt(gloc, yesterday);
+    // The linger window keys off the period's true exit instant. A TB
+    // bridge ended at ITS fast end (OH tzais), not at havdalah.
+    const yesterdayEndedAtFast = yesterdayContinues && !yesterdayHoly;
+    const exitTime = yesterdayEndedAtFast
+      ? fastEndAt(gloc, yesterday)
+      : havdalahAt(gloc, yesterday);
     if (now <= new Date(exitTime.getTime() + LINGER_MS)) {
       // Standalone fast (TB with no holy neighbour): the fast block already
       // showed both instants — nothing to linger.
@@ -285,10 +331,18 @@ export function computeEventLines(gloc, now) {
         const entryLabel = hasChag(eventsForHDate(back, gloc))
           ? 'כניסת החג'
           : 'הדלקת נרות';
-        const exitLabel = yesterdayContinues && !yesterdayHoly
-          ? 'סיום הצום'                       // YK bridge was the last day
+        const wasFastExit = yesterdayContinues && !yesterdayHoly;
+        const exitLabel = wasFastExit
+          ? 'סיום הצום'                       // TB bridge was the last day
           : (hasChag(evsYesterday) ? 'יציאת החג' : 'הבדלה');
         timed.push({ label: entryLabel, time: fmt(candlesAt(gloc, new HDate(back.abs() - 1))) });
+        // Fast-bridged exits linger with BOTH fast lines (gabbai decision,
+        // Sep 2026 — never a bare end line), same as the in-period display.
+        // תחילת = shkiah of the fast's EVE (yesterday−1), matching the fast
+        // block's start rule.
+        if (wasFastExit) {
+          timed.push({ label: 'תחילת הצום', time: fmt(shkiahOf(gloc, new HDate(yesterday.abs() - 1))) });
+        }
         timed.push({ label: exitLabel, time: fmt(exitTime) });
       }
     }

@@ -11,8 +11,8 @@ const exe = '/root/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome';
 if (!existsSync(exe)) { console.error('no cached chromium found'); process.exit(1); }
 
 const shots = [
-  { iso: '2026-09-12T13:00:00+03:00', file: 'shots/2026-09-12-rh-d1-shabbat-1300.png', label: 'RH d1 on Shabbat (yesterday)' },
-  { iso: '2026-09-19T13:00:00+03:00', file: 'shots/2026-09-19-shabbat-shuva-1300.png', label: 'Shabbat Shuva (next Shabbat)' },
+  { iso: '2026-09-12T13:00:00+03:00', file: 'shots/2026-09-12-rh-d1-shabbat-reading-1300.png', label: 'RH d1 Shabbat (leyning reading)' },
+  { iso: '2026-10-03T13:00:00+03:00', file: 'shots/2026-10-03-sa-st-shabbat-reading-1300.png', label: 'SA/ST Shabbat (leyning reading)' },
 ];
 
 const browser = await chromium.launch({
