@@ -45,7 +45,7 @@
 
 import { HDate, HebrewCalendar, Zmanim, flags } from '@hebcal/core';
 import { stripNikkud } from './reading.js';
-import { orHahaim } from './zmanim.js';
+import { dayFlipTzais, orHahaim } from './zmanim.js';
 
 // ─── Or Hahaim offsets (minutes, relative to @hebcal/core shkiah) ─────────────
 
@@ -149,11 +149,10 @@ export function computeEventLines(gloc, now) {
   const banners = [];
   const timed = [];
 
-  // Display day: after tzeit the header shows tomorrow — follow it exactly
-  // (same tzeit call as App.jsx's Jewish-date flip; both use hebcal's
-  // default 8.5° — locked in docs/adr/0001-day-flip-tzais-85.md, distinct
-  // from the DISPLAYED Or Hahaim tzais).
-  const tzaisNow = new Zmanim(gloc, now).tzeit();
+  // Display day: after tzeit the header shows tomorrow — follow it exactly.
+  // dayFlipTzais (zmanim.js) is the single source locked in ADR-0001 —
+  // App.jsx's header flip uses the same call, so both flip inseparably.
+  const tzaisNow = dayFlipTzais(gloc, now);
   const isAfterTzais = tzaisNow && now > tzaisNow;
   const today = isAfterTzais ? new HDate(new HDate(now).abs() + 1) : new HDate(now);
   const yesterday = new HDate(today.abs() - 1); // abs()-based: hd.next(-1) is buggy in 6.6.0

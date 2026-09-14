@@ -4,7 +4,7 @@ import { useFirestoreData } from './hooks/useFirestore';
 import { stripNikkud, findShabbatReading } from './lib/reading';
 import { needsImageReset } from './lib/slideshow';
 import { computeEventLines } from './lib/events';
-import { orHahaim } from './lib/zmanim.js';
+import { orHahaim, dayFlipTzais } from './lib/zmanim.js';
 import './index.css';
 
 // ─── left-column zmanim rows (Or Hahaim, locked "A" — see lib/zmanim.js) ──────
@@ -71,13 +71,12 @@ function findActiveImage(images, hMonth, hDay, hYear) {
  */
 function computeDisplayData(gloc, images, now) {
   const hd = new HDate(now);
-  const z = new Zmanim(gloc, now);
 
   // Jewish date in header
-  // Day-flip tzeit: hebcal's default 8.5° — locked in
-  // docs/adr/0001-day-flip-tzais-85.md; must stay the same call the event
-  // panel uses (lib/events.js) so header and panel flip inseparably.
-  const tzaisAt = z.tzeit();
+  // Day-flip tzeit — single source (lib/zmanim.js dayFlipTzais, locked in
+  // docs/adr/0001-day-flip-tzais-85.md): the same call the event panel uses,
+  // so header and panel flip inseparably. NOT the displayed OH tzais.
+  const tzaisAt = dayFlipTzais(gloc, now);
   const isAfterTzais = tzaisAt && now > tzaisAt;
   const displayHd = isAfterTzais
     ? new HDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1))

@@ -31,6 +31,22 @@
 import { Zmanim } from '@hebcal/core';
 
 /**
+ * The day-flip tzeit — hebcal's default 8.5°, NOT the displayed Or Hahaim
+ * tzais (shkiah + ¼ hour). Locked in docs/adr/0001-day-flip-tzais-85.md.
+ *
+ * Single source for BOTH the header's Jewish-date flip (App.jsx) and the
+ * event panel's display day (lib/events.js) — they must flip inseparably;
+ * when this changes, both change together.
+ *
+ * @param {Location} gloc
+ * @param {Date} now  current instant
+ * @returns {Date|null} today's tzeit, or null at polar latitudes
+ */
+export function dayFlipTzais(gloc, now) {
+  return new Zmanim(gloc, now).tzeit();
+}
+
+/**
  * @param {Location} gloc
  * @param {Date} t   any instant of the civil day to compute for
  * @returns {null | {
