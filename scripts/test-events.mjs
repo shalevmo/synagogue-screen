@@ -295,6 +295,52 @@ console.log('══ 21. Holiday-Shabbat readings via @hebcal/leyning (not קרי
   check('regular Shabbat stays parsha (Haazinu)', r(at10(2026, 9, 19)).text === 'פרשת האזינו');
 }
 
+console.log('══ 22. Modern holidays, winter anchors, maqaf banners, YK bridge');
+{
+  // ── Modern holidays (5787): banners only, no timed lines, omer co-shown.
+  // Shoah 27 Nisan = Tue 4 May 2027; Zikaron 4 Iyyar = Tue 11 May; Atzmaut 5 Iyyar = Wed 12 May.
+  const shoah = computeEventLines(loc, new Date(2027, 4, 4, 10, 0, 0));
+  check('Yom HaShoah banner', shoah.banners[0] === 'יום השואה');
+  check('Yom HaShoah: omer count co-displayed', shoah.banners.some((b) => /^י״ב בעומר$/.test(b)));
+  check('Yom HaShoah: no timed lines', shoah.timed.length === 0);
+  const zikaron = computeEventLines(loc, new Date(2027, 4, 11, 10, 0, 0));
+  check('Yom HaZikaron banner', zikaron.banners[0] === 'יום הזכרון');
+  const atzmaut = computeEventLines(loc, new Date(2027, 4, 12, 10, 0, 0));
+  check('Yom HaAtzmaut banner', atzmaut.banners[0] === 'יום העצמאות');
+
+  // ── Winter anchors (IST, UTC+2): times must format in Israel winter clock.
+  // RC Tevet 5787 = 10–11 Dec 2026; both days show the banner, no timed lines.
+  const rcTevet1 = computeEventLines(loc, new Date(2026, 11, 10, 10, 0, 0));
+  check('RC Tevet day1: banner (Chanukah day 7)', rcTevet1.banners.includes('חנוכה: ז׳ נרות'));
+  check('RC Tevet day1: RC banner', rcTevet1.banners.some((b) => b.includes('ראש חודש טבת')));
+  check('RC Tevet day1: no timed lines', rcTevet1.timed.length === 0);
+  const winterShabbat = computeEventLines(loc, new Date(2027, 0, 2, 10, 0, 0));
+  check('winter Shabbat candles 16:31 IST', winterShabbat.timed.some((t) => t.label === 'הדלקת נרות' && t.time === '16:31'));
+  check('winter Shabbat havdalah 17:22 IST', winterShabbat.timed.some((t) => t.label === 'הבדלה' && t.time === '17:22'));
+  check('winter Shabbat: no banners', winterShabbat.banners.length === 0);
+
+  // ── Maqaf banner: Nitzavim-Vayeilech (double parsha) — never a banner path,
+  // but 23 Elul 5787 shows סליחות + Shabbat pair. Reading-side maqaf is
+  // pinned in verify-reading.mjs (מטות־מסעי); here we pin the Selichot banner
+  // and the Shabbat candles pair on a pre-RH Friday evening.
+  const selichot = computeEventLines(loc, new Date(2027, 8, 25, 10, 0, 0));
+  check('Selichot banner (23 Elul 5787)', selichot.banners[0] === 'סליחות');
+  check('Selichot Shabbat: candles 18:18', selichot.timed.some((t) => t.label === 'הדלקת נרות' && t.time === '18:18'));
+
+  // ── YK-on-Shabbat bridge (dead path today, live 5789): the Friday before
+  // Sunday-start YK-on-Shabbat shows the chag entry (Q8:B — chag label wins
+  // over Shabbat candles on a dual erev), and NO הבדלה (YK swallows the exit).
+  const ykErev = computeEventLines(loc, new Date(2028, 8, 29, 10, 0, 0));
+  check('erev YK-on-Shabbat: כניסת החג 18:10 (chag label wins)', ykErev.timed.some((t) => t.label === 'כניסת החג' && t.time === '18:10'));
+  check('erev YK-on-Shabbat: no הבדלה (exit swallowed by YK)', !ykErev.timed.some((t) => t.label === 'הבדלה'));
+
+  // ── Maqaf double-parsha BANNER: Nitzavim-Vayeilech 5788 (25 Elul 5788,
+  // Sat 16 Sep 2028) — special Shabbatot like שבת שובה never carry maqaf,
+  // but a double-parsha year's Selichot Shabbat confirms banner rendering.
+  const nv5788 = computeEventLines(loc, new Date(2028, 8, 16, 10, 0, 0));
+  check('Nitzavim-Vayeilech year: Selichot banner 5788', nv5788.banners[0] === 'סליחות');
+}
+
 console.log('\\n══════════════════════════════════════');
 console.log(`${checks} checks, ${failures} failures`);
 process.exit(failures > 0 ? 1 : 0);
