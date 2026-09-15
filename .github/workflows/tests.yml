@@ -1,0 +1,38 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Event-panel suite (92 checks)
+        run: node scripts/test-events.mjs
+
+      - name: Or Hahaim zmanim anchors
+        run: node scripts/test-zmanim.mjs
+
+      - name: Golden harness (18480 snapshots)
+        run: node scripts/golden-events.mjs
+
+      - name: Reading pipeline (leyning truth)
+        run: node scripts/verify-reading.mjs
+
+      - name: Lint
+        run: npm run lint
