@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Jerusalem';
 // Regression: image-ready deadlock at the Hebrew year boundary (RH 5787).
 //
 // Mirrors App.jsx: displayHd rolls to the next Hebrew day after tzeit;

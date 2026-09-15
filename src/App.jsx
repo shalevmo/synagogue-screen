@@ -4,20 +4,21 @@ import { useFirestoreData } from './hooks/useFirestore';
 import { stripNikkud, findShabbatReading } from './lib/reading';
 import { needsImageReset } from './lib/slideshow';
 import { computeEventLines } from './lib/events';
+import { orHahaim, dayFlipTzais } from './lib/zmanim.js';
 import './index.css';
 
-// ─── zmanim keys (unchanged) ──────────────────────────────────────────────────
+// ─── left-column zmanim rows (Or Hahaim, locked "A" — see lib/zmanim.js) ──────
 
-const ZMANIM_ALL = [
-  { fn: 'alotHaShachar',   name: 'עלות השחר' },
-  { fn: 'neitzHaChama',    name: 'זריחה' },
-  { fn: 'sofZmanShmaMGA',  name: 'סו״ז שמע מג״א' },
-  { fn: 'sofZmanShma',     name: 'סו״ז שמע גר״א' },
-  { fn: 'sofZmanTfillaMGA',name: 'סו״ז תפילה מג״א' },
-  { fn: 'sofZmanTfilla',   name: 'סו״ז תפילה גר״א' },
-  { fn: 'chatzot',         name: 'חצות' },
-  { fn: 'shkiah',          name: 'שקיעה' },
-  { fn: 'tzaisBaalHatanya',name: 'צאת הכוכבים' },
+const ZMANIM_ROWS = [
+  { key: 'alot',    name: 'עלות השחר' },
+  { key: 'sunrise', name: 'זריחה' },
+  { key: 'shmaMGA', name: 'סו״ז שמע מג״א' },
+  { key: 'shmaGRA', name: 'סו״ז שמע גר״א' },
+  { key: 'tefMGA',  name: 'סו״ז תפילה מג״א' },
+  { key: 'tefGRA',  name: 'סו״ז תפילה גר״א' },
+  { key: 'chatzot', name: 'חצות' },
+  { key: 'shkiah',  name: 'שקיעה' },
+  { key: 'tzais',   name: 'צאת הכוכבים' },
 ];
 
 // ─── module-scope Intl formatters (hoisted: construction is expensive) ────────
@@ -70,10 +71,12 @@ function findActiveImage(images, hMonth, hDay, hYear) {
  */
 function computeDisplayData(gloc, images, now) {
   const hd = new HDate(now);
-  const z = new Zmanim(gloc, now);
 
   // Jewish date in header
-  const tzaisAt = z.tzeit();
+  // Day-flip tzeit — single source (lib/zmanim.js dayFlipTzais, locked in
+  // docs/adr/0001-day-flip-tzais-85.md): the same call the event panel uses,
+  // so header and panel flip inseparably. NOT the displayed OH tzais.
+  const tzaisAt = dayFlipTzais(gloc, now);
   const isAfterTzais = tzaisAt && now > tzaisAt;
   const displayHd = isAfterTzais
     ? new HDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1))
@@ -88,16 +91,11 @@ function computeDisplayData(gloc, images, now) {
   const yyyy = now.getFullYear();
   const dayAndDate = `${dow}\u00a0|\u00a0${dd}/${mm}/${yyyy}`;
 
-  // Zmanim
-  const zmanimTimes = ZMANIM_ALL.map(({ fn, name }) => {
-    let val = '';
-    try {
-      val = fmt(z[fn]());
-    } catch {
-      // certain zmanim may not exist for this location/date — leave blank
-    }
-    return { name, time: val };
-  });
+  // Zmanim — Or Hahaim (left column follows the community's convention)
+  const oh = orHahaim(gloc, now);
+  const zmanimTimes = oh
+    ? ZMANIM_ROWS.map(({ key, name }) => ({ name, time: fmt(oh[key]) }))
+    : ZMANIM_ROWS.map(({ name }) => ({ name, time: '' }));
 
   // Parsha — or the holiday reading when no regular parsha is read
   // (Rosh Hashana / Yom Kippur / Sukkot / Shmini Atzeret / Pesach Shabbats).
@@ -139,16 +137,27 @@ export default function App() {
   const [showDefault, setShowDefault] = useState(true);
   const [imageReady, setImageReady] = useState(false);
 
-  // Build Location object from config (memoized — no effect or extra state)
+  // Build Location object from config (memoized — no effect or extra state).
+  // Firestore owns this data: a bad `location` doc (garbage lat or timezone)
+  // would throw inside every zmanim memo and white-screen the kiosk. Validate
+  // by construction — smoke-run a sunrise once per config change and fall
+  // back to the Netivot default if it throws.
   const gloc = useMemo(() => {
     const loc = config.location || {};
-    return new Location(
-      loc.lat ?? 31.42215,
-      loc.lng ?? 34.58858,
-      true,
-      loc.timezone ?? 'Asia/Jerusalem',
-      loc.elevation ?? 0,
-    );
+    try {
+      const candidate = new Location(
+        loc.lat ?? 31.42215,
+        loc.lng ?? 34.58858,
+        true,
+        loc.timezone ?? 'Asia/Jerusalem',
+        loc.elevation ?? 0,
+      );
+      new Zmanim(candidate, new HDate()).sunrise(); // smoke-test: validates tz + coords
+      return candidate;
+    } catch {
+      console.warn('Bad config.location, falling back to Netivot default');
+      return new Location(31.42215, 34.58858, true, 'Asia/Jerusalem', 0);
+    }
   }, [config.location]);
 
   // Single ticker: the only state this component owns besides the view toggle.

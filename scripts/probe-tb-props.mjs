@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Jerusalem';
 // Dump hebcal event properties around TB 5787 to design the erev-fast exclusion.
 import { Location, HDate, HebrewCalendar } from '@hebcal/core';
 

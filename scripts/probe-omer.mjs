@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Jerusalem';
 // Probe Sefirat Haomer 5787 behavior: dates, panel lines, Omer emission.
 import { Location, HDate, HebrewCalendar, Zmanim } from '@hebcal/core';
 import { computeEventLines } from '../src/lib/events.js';

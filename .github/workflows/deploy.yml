@@ -1,7 +1,9 @@
 name: Deploy to S3 + CloudFront
 
 on:
-  push:
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
     branches: [master, main]
   workflow_dispatch:
 
@@ -12,12 +14,19 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # workflow_run fires on BOTH success and failure of the Tests workflow —
+    # deploy only when it concluded successfully (or on manual dispatch).
+    # A red suite must never reach the live kiosk.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # workflow_run must check out the commit Tests actually validated —
+          # the default (default-branch HEAD) could be a newer, untested push.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -90,4 +99,4 @@ jobs:
           gh release create "$next" \
             --title "$next" \
             --generate-notes \
-            --target "${{ github.sha }}"
+            --target "${{ github.event.workflow_run.head_sha || github.sha }}"

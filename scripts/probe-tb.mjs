@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Jerusalem';
 // Probe TB 5787 (9 Av = Wed Aug 11 2027) with explicit UTC instants.
 import { Location, HDate } from '@hebcal/core';
 import { computeEventLines } from '../src/lib/events.js';
