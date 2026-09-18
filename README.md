@@ -50,10 +50,16 @@ The app expects a Firebase project with Firestore enabled.
 - `/config/app-config` — `title`, `location`, `defaultViewDuration`, `imageDisplayDuration`
 - `/prayers/{id}` — `order`, `name`, `time`
 - `/images/{id}` — `name`, `imageUrl`, `startDay`, `startMonth`, `endDay`, `endMonth`, `year`
+- `/version/current` — `version`, `deployedAt` — written by the deploy workflow; kiosk clients watch it and reload when newer than the build-time version (see `src/hooks/useVersionReload.js`)
 
 ## Deployment
 
-The workflow in `.github/workflows/deploy.yml` builds and deploys on every push to `master`.
+The workflow in `.github/workflows/deploy.yml` deploys on every green Tests run for `master`:
+
+1. Bump `package.json` to the next semver patch (tag-derived), build with it baked in (shown under the clock).
+2. Sync `dist/` to S3 + invalidate CloudFront.
+3. Write the version to Firestore `/version/current` — running kiosks detect it and reload themselves.
+4. Tag a GitHub release and commit the version bump back to `master` (`[skip ci]`).
 
 Required repository secrets (Settings → Secrets and variables → Actions):
 
@@ -70,6 +76,7 @@ Required repository secrets (Settings → Secrets and variables → Actions):
 | `AWS_REGION` | AWS region, e.g. `eu-central-1` |
 | `S3_BUCKET` | S3 bucket name |
 | `CLOUDFRONT_DISTRIBUTION_ID` | CloudFront distribution ID |
+| `FIREBASE_DEPLOY_SA_KEY` | JSON key of the `github-deploy-version` service account (Firestore write for `/version/current`) |
 
 ## AWS IAM policy
 

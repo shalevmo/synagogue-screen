@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { HDate, Location, Zmanim } from '@hebcal/core';
 import { useFirestoreData } from './hooks/useFirestore';
+import { useVersionReload } from './hooks/useVersionReload';
 import { stripNikkud, findShabbatReading } from './lib/reading';
 import { needsImageReset } from './lib/slideshow';
 import { computeEventLines } from './lib/events';
@@ -133,6 +134,7 @@ function handleKeyDown(e) {
 
 export default function App() {
   const { config, prayers, images } = useFirestoreData();
+  useVersionReload(); // Firestore /version/current → reload on newer deploy
   const [now, setNow] = useState(() => new Date());
   const [showDefault, setShowDefault] = useState(true);
   const [imageReady, setImageReady] = useState(false);
@@ -298,7 +300,10 @@ export default function App() {
               </div>
             )}
 
-            <span id="clock">{clock}</span>
+            <div className="d-flex flex-column">
+              <span id="clock">{clock}</span>
+              <span id="version">v{__APP_VERSION__}</span>
+            </div>
           </div>
 
           <div className="bordered col-4 d-flex flex-column p-3 pb-5 justify-content-between">

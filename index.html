@@ -6,38 +6,26 @@
     <base href="./" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <!--
+      Deploy updates are detected via Firestore /version/current (see
+      src/hooks/useVersionReload.js) — the kiosk reloads itself when the
+      deployed version is newer than the build-time __APP_VERSION__.
+      The old service-worker poller (sw.js) never worked behind
+      CloudFront's stale-edge responses and was removed.
+    -->
+    <script>
+      // Unregister any service worker left from the previous update
+      // mechanism, so it stops controlling the page and its cached
+      // responses can't shadow fresh deploys.
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((r) => r.unregister());
+        }).catch(() => {});
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
-          console.log('[SW] registered:', registration.scope);
-
-          // Listen for messages from the SW (e.g. reload request)
-          navigator.serviceWorker.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'RELOAD_PAGE') {
-              console.log('[SW] reloading for new version');
-              window.location.reload();
-            }
-          });
-
-          // If a new service worker is waiting, ask it to activate
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  newWorker.postMessage('SKIP_WAITING');
-                }
-              });
-            }
-          });
-        })
-        .catch((err) => console.error('[SW] registration failed:', err));
-    }
-  </script>
 </html>

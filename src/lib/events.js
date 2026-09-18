@@ -32,7 +32,8 @@
 import { HDate } from '@hebcal/core';
 import { dayFlipTzais } from './zmanim.js';
 import {
-  candlesAt, continuesRun, eventsForHDate, hasChag, holyOf, fmt,
+  candlesAt, continuesRun, eventsForHDate, exitLinesOf, hasChag, holyOf, fmt,
+  walkForward,
 } from './events/common.js';
 import { bannersOf } from './events/banners.js';
 import { fastBlockOf } from './events/fastBlock.js';
@@ -89,12 +90,17 @@ export function computeEventLines(gloc, now) {
     const linger = lingerOf(gloc, now, yesterday, yesterdayHoly, yesterdayContinues);
     if (linger) timed.push(...linger.timed);
 
-    // ── Erev (chol today, holiness starts tonight): tonight's entry line ────
+    // ── Erev (chol today, holiness starts tonight): tonight's entry line +─
+    // the period's exit line, so candle-lighting days always show both.
     // Tisha B'Av has no candles — a major fast without the chag flag is
     // excluded (YK keeps its line: it lights candles and carries CHAG).
     if (tomorrowHoly || (tomorrowContinues && hasChag(evsTomorrow))) {
       const label = hasChag(evsTomorrow) ? 'כניסת החג' : 'הדלקת נרות';
       timed.push({ label, time: fmt(candlesAt(gloc, today)) });
+      // The run starting tonight may extend beyond tomorrow (Shabbat into
+      // Yom Tov, multi-day chag): walkForward finds its true last member.
+      const runEnd = walkForward(tomorrow, gloc);
+      timed.push(...exitLinesOf(gloc, runEnd));
     }
   }
 

@@ -24,7 +24,7 @@ import { computeEventLines } from '../src/lib/events.js';
 
 const YEAR = 5787;
 const NETIVOT = new Location(31.42215, 34.58858, true, 'Asia/Jerusalem', 0);
-const PINNED = '6409ef608bc75c359d0d0333e4d38d8231fcf7f3b8fb47130336a5df5c7af126';
+const PINNED = '8311baeb64f8bbfdc5a347e06d487be5b3a512a48ac286f1af4d0f4ba8164965';
 
 /** abs day 719163 = 1970-01-01 (checked by the self-test below) */
 const ABS_EPOCH = 719163;

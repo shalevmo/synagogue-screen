@@ -14,7 +14,12 @@ export default defineConfig([
       reactRefresh.configs.vite,
     ],
     languageOptions: {
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        // Build-time constant injected by vite.config.js `define` (package.json
+        // version, bumped by the deploy workflow). Not a real global at runtime.
+        __APP_VERSION__: 'readonly',
+      },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },

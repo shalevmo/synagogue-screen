@@ -22,6 +22,12 @@
  *     endDay:    number
  *     endMonth:  number
  *     year:      number|null  (null = every year, e.g. 5786 = only that year)
+ *
+ *   /version/current
+ *     version:    string  ("1.0.20" — the deployed package.json version,
+ *                          written by the deploy workflow; see
+ *                          src/hooks/useVersionReload.js)
+ *     deployedAt: string  (ISO timestamp, informational)
  */
 
 import { useEffect, useState, useRef } from 'react';
