@@ -24,5 +24,14 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+    // Deploy version — written by the deploy workflow's service account
+    // (Admin SDK bypasses rules; this only keeps public writes out).
+    // Clients watch it and reload when it's newer than their build
+    // (src/hooks/useVersionReload.js).
+    match /version/{document=**} {
+      // react-doctor-disable-next-line react-doctor/firebase-permissive-rules
+      allow read: if true;
+      allow write: if false;
+    }
   }
 }

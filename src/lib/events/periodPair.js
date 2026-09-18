@@ -10,8 +10,7 @@
  */
 import { HDate } from '@hebcal/core';
 import {
-  candlesAt, continuesRun, entryLabelOf, eventsForHDate, fastEndAt,
-  hasChag, havdalahAt, shkiahOf, walkBack, walkForward, fmt,
+  candlesAt, entryLabelOf, exitLinesOf, walkBack, walkForward, fmt,
 } from './common.js';
 
 /**
@@ -35,23 +34,9 @@ export function periodPairOf(gloc, today, todayContinues, tomorrow, tomorrowHoly
   const periodEve = new HDate(start.abs() - 1);
   timed.push({ label: entryLabelOf(gloc, start), time: fmt(candlesAt(gloc, periodEve)) });
 
-  // Exit: the run's final exit instant (last member incl. bridge).
-  // A trailing Tisha B'Av bridge ends at ITS fast end (OH tzais), with
-  // the fast label — YK keeps יציאת החג at havdalah (it is a chag).
-  // Gabbai decision (Sep 2026): a fast-bridged exit shows BOTH the
-  // fast's start and end on the days BEFORE the fast (Shabbat 9 Av
-  // nidche → the congregation sees when tonight's fast begins) —
-  // never a bare end line. The start follows the fast block's rule:
-  // TB begins at shkiah of the eve (the Motzei-Shabbat shkiah).
-  const endEvs = eventsForHDate(end, gloc);
-  const endIsFastBridge = continuesRun(endEvs) && !hasChag(endEvs);
-  if (endIsFastBridge) {
-    timed.push({ label: 'תחילת הצום', time: fmt(shkiahOf(gloc, new HDate(end.abs() - 1))) });
-    timed.push({ label: 'סיום הצום', time: fmt(fastEndAt(gloc, end)) });
-  } else {
-    const exitLabel = hasChag(endEvs) ? 'יציאת החג' : 'הבדלה';
-    timed.push({ label: exitLabel, time: fmt(havdalahAt(gloc, end)) });
-  }
+  // Exit: the run's final exit instant (last member incl. bridge) — shared
+  // exitLinesOf (common.js), same rules as the erev entry line.
+  timed.push(...exitLinesOf(gloc, end));
 
   // Supplementary candles inside the run (see doc header).
   if (today.getDay() === 5 && start.abs() < today.abs()

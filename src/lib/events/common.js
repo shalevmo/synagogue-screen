@@ -97,6 +97,33 @@ export function fastEndAt(gloc, hd) {
   return new Date(orHahaim(gloc, middayOf(hd)).tzais.getTime());
 }
 
+/**
+ * The exit line(s) of a holy run whose LAST member is runEnd — shared by
+ * the in-period pair (periodPair.js) and the erev entry (events.js), so
+ * candle-lighting days always show the period's exit next to its entry.
+ *
+ * A trailing fast bridge (Tisha B'Av after Shabbat) ends at ITS fast end
+ * (OH tzais) and shows BOTH fast lines — gabbai decision (Sep 2026): the
+ * days BEFORE the fast must show when it begins, never a bare end line.
+ * The start follows the fast block's rule: TB begins at shkiah of the eve.
+ * YK is a chag (CHAG flag) so it exits at havdalah with יציאת החג; a
+ * Shabbat-only run shows הבדלה (chag label wins, Q8).
+ *
+ * @returns {{label: string, time: string}[]}
+ */
+export function exitLinesOf(gloc, runEnd) {
+  const endEvs = eventsForHDate(runEnd, gloc);
+  const endIsFastBridge = continuesRun(endEvs) && !hasChag(endEvs);
+  if (endIsFastBridge) {
+    return [
+      { label: 'תחילת הצום', time: fmt(shkiahOf(gloc, new HDate(runEnd.abs() - 1))) },
+      { label: 'סיום הצום', time: fmt(fastEndAt(gloc, runEnd)) },
+    ];
+  }
+  const exitLabel = hasChag(endEvs) ? 'יציאת החג' : 'הבדלה';
+  return [{ label: exitLabel, time: fmt(havdalahAt(gloc, runEnd)) }];
+}
+
 /** Minor-fast start: the Or Hahaim dawn (alot) of the fast's own day. */
 export function orHahaimAlot(gloc, hd) {
   return orHahaim(gloc, middayOf(hd)).alot;

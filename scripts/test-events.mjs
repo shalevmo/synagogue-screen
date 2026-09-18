@@ -45,7 +45,8 @@ console.log('══ 1. Regular Friday (chol, 16 Oct 2026)');
   console.log('   ', lines(res));
   check('הדלקת נרות shown', res.timed.some((t) => t.label === 'הדלקת נרות'));
   check('time = 17:50 (hebcal shkiah 18:08 − 18m)', time(res, 'הדלקת נרות') === '17:50');
-  check('no havdalah', !res.timed.some((t) => t.label === 'הבדלה'));
+  check('havdalah shown WITH candles (exit next to entry)', res.timed.some((t) => t.label === 'הבדלה'));
+  check('havdalah = 18:39 (hebcal shkiah 18:07 + 32m)', time(res, 'הבדלה') === '18:39');
 }
 
 console.log('══ 2. Regular Shabbat (chol, 17 Oct 2026) — full pair all day');
@@ -341,6 +342,41 @@ console.log('══ 22. Modern holidays, winter anchors, maqaf banners, YK bridg
   check('Nitzavim-Vayeilech year: Selichot banner 5788', nv5788.banners[0] === 'סליחות');
 }
 
-console.log('\\n══════════════════════════════════════');
+console.log('══ 23. Candles ALWAYS paired with the exit — Shabbat/Yom Tov overlap');
+{
+  // ── Yom Tov run with an INNER Shabbat: Sukkot 5786 (erev Mon 6 Oct 2025,
+  //    run Tue 7 Oct → ST Mon 13 Oct). The chol erev must show the CHAG
+  //    exit of the run's true last day (ST, 18:10+32), NOT an imagined
+  //    Friday-candles havdalah — walkForward spans the inner Shabbat.
+  const erev = computeEventLines(loc, at(2025, 10, 6, 10, 0));
+  console.log('    erev Sukkot-into-Shabbat (Mon 6 Oct 2025) →', lines(erev));
+  check('erev: כניסת החג shown', erev.timed.some((t) => t.label === 'כניסת החג'));
+  check('erev: exit is יציאת החג (chag run, not havdalah)', erev.timed.some((t) => t.label === 'יציאת החג'));
+  check('erev: exit 18:42 = ST shkiah 18:10+32 (run end)', time(erev, 'יציאת החג') === '18:42');
+  check('erev: NO הבדלה line', !erev.timed.some((t) => t.label === 'הבדלה'));
+
+  // ── Chag run ENDING on Shabbat (RH 5784): d1 Friday 15 Sep 2023, d2
+  //    SHABBAT 16 Sep. Erev was Thursday (chol); ON the Friday the in-period
+  //    pair must show SUNDAY'S chag exit (19:17), not Saturday havdalah —
+  //    the overlap case the gabbai asked about, verified both ways.
+  const d1 = computeEventLines(loc, at(2023, 9, 15, 10, 0));
+  console.log('    RH d1 on Friday (15 Sep 2023) →', lines(d1));
+  check('RH d1 Fri: pair shows יציאת החג 19:17 (Sun d2, chag exit)',
+    time(d1, 'כניסת החג') === '18:30' && time(d1, 'יציאת החג') === '19:17');
+
+  // ── Erev YK 5787 (chol Sunday): exit = YK's own havdalah labeled
+  //    יציאת החג (YK is a chag).
+  const ykErev = computeEventLines(loc, at(2026, 9, 20, 10, 0));
+  check('erev YK: exit יציאת החג 19:11 = YK havdalah',
+    time(ykErev, 'יציאת החג') === '19:11');
+
+  // ── No candles → no exit line either (Shabbat 9 Av 5789: fast block owns
+  //    the day, no chag entry line).
+  const tbShabbat = computeEventLines(loc, at(2029, 7, 21, 13, 0));
+  check('Shabbat 9 Av: no entry line, fast block owns the day',
+    !tbShabbat.timed.some((t) => t.label === 'כניסת החג'));
+}
+
+console.log('\n══════════════════════════════════════');
 console.log(`${checks} checks, ${failures} failures`);
 process.exit(failures > 0 ? 1 : 0);

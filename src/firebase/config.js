@@ -15,8 +15,12 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// Connect to emulators in local dev
-if (import.meta.env.DEV && import.meta.env.VITE_FIREBASE_EMULATOR === 'true') {
+// Connect to emulators when explicitly requested. NOT gated on
+// import.meta.env.DEV: the version-reload E2E test (scripts/
+// verify-version-reload.mjs) builds the app with VITE_FIREBASE_EMULATOR=true
+// and runs it against the emulator suite — a DEV-only gate would make the
+// production build talk to the real project in that test.
+if (import.meta.env.VITE_FIREBASE_EMULATOR === 'true') {
   connectFirestoreEmulator(db, 'localhost', 8080);
   connectStorageEmulator(storage, 'localhost', 9199);
 }

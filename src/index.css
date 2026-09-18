@@ -83,6 +83,16 @@ span {
   font-size: 8.9vh;
 }
 
+/* Small version text under the clock — build-time package.json version
+   (vite define). Unobtrusive on the kiosk: ~1/9 of the clock's height. */
+#version {
+  font-size: 1vh;
+  line-height: 1;
+  color: #9a9a9a;
+  margin-top: -1.2vh;
+  font-variant-numeric: tabular-nums;
+}
+
 .special-text {
   margin-top: -1vh;
   font-size: 6.7vh;
