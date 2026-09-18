@@ -84,9 +84,10 @@ span {
 }
 
 /* Small version text under the clock — build-time package.json version
-   (vite define). Unobtrusive on the kiosk: ~1/9 of the clock's height. */
+   (vite define). Unobtrusive on the kiosk (bumped 1vh → 1.2vh on the
+   gabbai's request, Sep 18 2026: +20% for readability on the FHD kiosk). */
 #version {
-  font-size: 1vh;
+  font-size: 1.2vh;
   line-height: 1;
   color: #9a9a9a;
   margin-top: -1.2vh;
