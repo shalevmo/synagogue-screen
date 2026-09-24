@@ -126,6 +126,17 @@
     color: #333;
   }
 
+  /* Footer blessing — absolutely positioned in the free strip under the
+     separator line, so it doesn't move anything else. */
+  #blessing {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 12vh;
+    text-align: center;
+    font-size: 3.8vh;
+  }
+
 </style>
 </head>
 <body>
@@ -178,6 +189,8 @@
     </div>
 
   </div>
+
+  <span id="blessing" class="red">בברכת: ״חג כשר ושמח ומועדים לשמחה״</span>
 
 </div>
 </body>
