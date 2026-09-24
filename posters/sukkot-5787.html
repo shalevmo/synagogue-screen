@@ -41,7 +41,7 @@
     position: relative;
     width: 100%;
     height: 100%;
-    padding: 9vh 9vw 10.5vh;
+    padding: 9vh 9vw 11vh;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -65,13 +65,16 @@
     margin-top: 1.2vh;
   }
 
-  /* ── Two columns separated by the kiosk's gold rule (line.png) ── */
+  /* ── Two columns separated by the kiosk's gold rule (line.png) ──
+     Same proportions as the kiosk's .bordered: 90% of the column height,
+     column ends 11vh + 1rem above the bottom edge. */
   #columns {
     flex: 1 1 auto;
     width: 100%;
     display: flex;
     flex-direction: row;
     margin-top: 2.8vh;
+    margin-bottom: 1rem;
     padding: 0 1.5vw;
   }
 
@@ -81,14 +84,14 @@
     flex-direction: column;
     justify-content: center;
     gap: 2.6vh;
-    padding: 0 2.4vw;
+    padding: 0 2.4vw 6.2vh; /* bottom 10% → center content on the 90% line */
   }
 
   .col + .col {
     background-image: url('/line.png');
     background-repeat: no-repeat;
     background-position: top right;
-    background-size: auto 100%;
+    background-size: auto 90%;
   }
 
   .section { display: flex; flex-direction: column; gap: 0.9vh; }
