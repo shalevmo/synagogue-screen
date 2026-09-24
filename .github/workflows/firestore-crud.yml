@@ -1,0 +1,63 @@
+name: Firestore CRUD
+
+# Read / write the kiosk's Firestore data (config, prayers, images, version)
+# without the Firebase Console. See scripts/firestore-crud.mjs for details.
+#
+# Examples (Actions → Firestore CRUD → Run workflow, or the API):
+#   list    images
+#   get     images/sukkot-5787
+#   set     images/sukkot-5787  {"name":"sukkot-5787","imageUrl":"https://…/screen/sukkot-5787.webp","startDay":13,"startMonth":7,"endDay":22,"endMonth":7,"year":5787}
+#   update  config/app-config   {"imageDisplayDuration":20}
+#   delete  images/sukkot-5787
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Operation"
+        type: choice
+        options: [list, get, add, set, update, delete]
+        required: true
+        default: list
+      path:
+        description: "Collection (list/add) or collection/docId (get/set/update/delete)"
+        type: string
+        required: true
+      data:
+        description: "JSON object (add/set/update only)"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+# Serialize writes so two runs never race on the same document.
+concurrency:
+  group: firestore-crud
+  cancel-in-progress: false
+
+jobs:
+  crud:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ${{ inputs.operation }} ${{ inputs.path }}
+        # Inputs go through env, never interpolated into the script.
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_ADMIN_SA_KEY }}
+          OP: ${{ inputs.operation }}
+          DOC_PATH: ${{ inputs.path }}
+          DATA: ${{ inputs.data }}
+        run: node scripts/firestore-crud.mjs "$OP" "$DOC_PATH" "$DATA"
