@@ -77,6 +77,22 @@ Required repository secrets (Settings → Secrets and variables → Actions):
 | `S3_BUCKET` | S3 bucket name |
 | `CLOUDFRONT_DISTRIBUTION_ID` | CloudFront distribution ID |
 | `FIREBASE_DEPLOY_SA_KEY` | JSON key of the `github-deploy-version` service account (Firestore write for `/version/current`) |
+| `FIREBASE_ADMIN_SA_KEY` | JSON key of the `github-firestore-crud` service account (role *Cloud Datastore User*) — used by the **Firestore CRUD** workflow |
+
+## Editing Firestore from GitHub
+
+The **Firestore CRUD** workflow (`.github/workflows/firestore-crud.yml`, Actions → Firestore CRUD → Run workflow) reads and writes the kiosk's data without the Firebase Console:
+
+| Operation | Path | Data |
+|-----------|------|------|
+| `list` | `images` | — |
+| `get` | `images/sukkot-5787` | — |
+| `add` | `prayers` (auto id) | JSON object |
+| `set` | `images/sukkot-5787` (create / replace) | JSON object |
+| `update` | `config/app-config` (merge) | JSON object |
+| `delete` | `images/sukkot-5787` | — |
+
+Only `config`, `prayers`, `images` and `version` are reachable. JSON numbers stay numbers (the kiosk compares `year` strictly). Every write logs the document's previous state in the run summary, so a mistake can be undone with a `set` of the old data.
 
 ## AWS IAM policy
 
