@@ -41,7 +41,7 @@
     position: relative;
     width: 100%;
     height: 100%;
-    padding: 9vh 9vw 11vh;
+    padding: 11vh 9vw; /* kiosk #content-wrapper */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -52,13 +52,10 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-top: 2.2vh;
+    margin-top: 1rem; /* kiosk header .mt-3 → title at the same y */
   }
 
-  #title {
-    font-size: 9.5vh;
-    margin-top: 0.2vh;
-  }
+  #title { font-size: 9.5vh; }
 
   #subtitle {
     font-size: 5vh;
@@ -73,7 +70,7 @@
     width: 100%;
     display: flex;
     flex-direction: row;
-    margin-top: 2.8vh;
+    margin-top: 2.2vh;
     margin-bottom: 1rem;
     padding: 0 1.5vw;
   }
