@@ -41,17 +41,10 @@
     position: relative;
     width: 100%;
     height: 100%;
-    padding: 9vh 9vw 11vh;
+    padding: 9vh 9vw 10.5vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-  }
-
-  #bsd {
-    position: absolute;
-    top: 13.2vh;
-    right: 15.5vw;
-    font-size: 2.8vh;
   }
 
   /* ── Header ── */
@@ -59,19 +52,17 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-top: 2.4vh;
+    margin-top: 2.2vh;
   }
 
-  #pre-title { font-size: 3.2vh; }
-
   #title {
-    font-size: 8.6vh;
+    font-size: 9.5vh;
     margin-top: 0.2vh;
   }
 
   #subtitle {
-    font-size: 4.8vh;
-    margin-top: 1vh;
+    font-size: 5vh;
+    margin-top: 1.2vh;
   }
 
   /* ── Two columns separated by the kiosk's gold rule (line.png) ── */
@@ -80,7 +71,7 @@
     width: 100%;
     display: flex;
     flex-direction: row;
-    margin-top: 2.2vh;
+    margin-top: 2.8vh;
     padding: 0 1.5vw;
   }
 
@@ -89,7 +80,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 1.8vh;
+    gap: 2.6vh;
     padding: 0 2.4vw;
   }
 
@@ -103,7 +94,7 @@
   .section { display: flex; flex-direction: column; gap: 0.9vh; }
 
   .day {
-    font-size: 3.8vh;
+    font-size: 4vh;
     padding-bottom: 0.7vh;
     margin-bottom: 0.2vh;
     border-bottom: 2px solid rgba(117, 26, 27, 0.35);
@@ -114,7 +105,7 @@
     flex-direction: row;
     align-items: baseline;
     gap: 1.2vw;
-    font-size: 3.2vh;
+    font-size: 3.4vh;
   }
 
   .time {
@@ -125,31 +116,22 @@
   }
 
   .text {
-    font-size: 2.9vh;
+    font-size: 3.1vh;
     line-height: 1.25;
   }
 
   .note {
-    font-size: 2.7vh;
+    font-size: 2.9vh;
     line-height: 1.3;
     color: #333;
   }
 
-  /* ── Footer blessing ── */
-  #blessing {
-    margin-top: 1.4vh;
-    font-size: 4.2vh;
-    text-align: center;
-  }
 </style>
 </head>
 <body>
 <div id="poster">
 
-  <span id="bsd">בס״ד</span>
-
   <div id="header">
-    <span id="pre-title">בית הכנסת</span>
     <span id="title" class="red">משכן שמואל</span>
     <span id="subtitle">תפילות חג הסוכות הבעל״ט</span>
   </div>
@@ -196,8 +178,6 @@
     </div>
 
   </div>
-
-  <span id="blessing" class="red">בברכת: ״חג כשר ושמח ומועדים לשמחה״</span>
 
 </div>
 </body>
