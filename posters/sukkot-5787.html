@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<title>תפילות חג הסוכות תשפ״ז</title>
+<!--
+  Temporary poster page — rendered to a 1920×1080 screenshot and uploaded
+  as a scheduled /images slide (see scripts/upload-screen-image.sh).
+  Uses the kiosk's font, background and palette (src/index.css).
+  Served by the Vite dev server only: `npx vite` → /posters/sukkot-5787.html
+-->
+<style>
+  @font-face {
+    font-family: 'ashkenazi';
+    src: url('/ashkenazi.ttf') format('truetype');
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  body {
+    background-image: url('/background.jpg');
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    font-family: 'ashkenazi', serif;
+    color: #000;
+  }
+
+  span, div { line-height: 1; }
+
+  .red { color: #751a1b; }
+
+  /* Same inner frame box as the kiosk's #content-wrapper */
+  #poster {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 9vh 9vw 11vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #bsd {
+    position: absolute;
+    top: 13.2vh;
+    right: 15.5vw;
+    font-size: 2.8vh;
+  }
+
+  /* ── Header ── */
+  #header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 2.4vh;
+  }
+
+  #pre-title { font-size: 3.2vh; }
+
+  #title {
+    font-size: 8.6vh;
+    margin-top: 0.2vh;
+  }
+
+  #subtitle {
+    font-size: 4.8vh;
+    margin-top: 1vh;
+  }
+
+  /* ── Two columns separated by the kiosk's gold rule (line.png) ── */
+  #columns {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    margin-top: 2.2vh;
+    padding: 0 1.5vw;
+  }
+
+  .col {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1.8vh;
+    padding: 0 2.4vw;
+  }
+
+  .col + .col {
+    background-image: url('/line.png');
+    background-repeat: no-repeat;
+    background-position: top right;
+    background-size: auto 100%;
+  }
+
+  .section { display: flex; flex-direction: column; gap: 0.9vh; }
+
+  .day {
+    font-size: 3.8vh;
+    padding-bottom: 0.7vh;
+    margin-bottom: 0.2vh;
+    border-bottom: 2px solid rgba(117, 26, 27, 0.35);
+  }
+
+  .row {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 1.2vw;
+    font-size: 3.2vh;
+  }
+
+  .time {
+    flex: 0 0 auto;
+    min-width: 5.4vw;
+    font-variant-numeric: tabular-nums;
+    font-weight: bold;
+  }
+
+  .text {
+    font-size: 2.9vh;
+    line-height: 1.25;
+  }
+
+  .note {
+    font-size: 2.7vh;
+    line-height: 1.3;
+    color: #333;
+  }
+
+  /* ── Footer blessing ── */
+  #blessing {
+    margin-top: 1.4vh;
+    font-size: 4.2vh;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div id="poster">
+
+  <span id="bsd">בס״ד</span>
+
+  <div id="header">
+    <span id="pre-title">בית הכנסת</span>
+    <span id="title" class="red">משכן שמואל</span>
+    <span id="subtitle">תפילות חג הסוכות הבעל״ט</span>
+  </div>
+
+  <div id="columns">
+
+    <!-- Right column (RTL first): Sukkot + Chol Hamoed -->
+    <div class="col">
+      <div class="section">
+        <span class="day red">יום שישי – ערב חג הסוכות</span>
+        <span class="text">בכניסת השבת והחג – תפילת מנחה, שיחה בנושא: מהות חג הסוכות, ובסמוך תפילת ערבית של שבת וחג.</span>
+      </div>
+
+      <div class="section">
+        <span class="day red">יום שבת – חג הסוכות</span>
+        <span class="text">תפילות כרגיל כמו במשך השנה.</span>
+      </div>
+
+      <div class="section">
+        <span class="day red">תפילות חול המועד</span>
+        <div class="row"><span class="time">07:00</span><span>תפילת שחרית</span></div>
+        <span class="note">לא יתקיימו תפילות מנחה וערבית במהלך חול המועד.</span>
+      </div>
+    </div>
+
+    <!-- Left column: Hoshana Rabba + Simchat Torah -->
+    <div class="col">
+      <div class="section">
+        <span class="day red">יום חמישי – ליל הושענא רבה</span>
+        <div class="row"><span class="time">00:00</span><span>לימוד כל הלילה – תחילת הלימוד</span></div>
+      </div>
+
+      <div class="section">
+        <span class="day red">יום שישי – ערב שמחת תורה</span>
+        <div class="row"><span class="time">05:40</span><span>תפילת שחרית</span></div>
+        <span class="text">בכניסת השבת וחג שמחת תורה – תפילת מנחה, שיחה בנושא: מהות חג מתן תורה, ובסמוך תפילת ערבית של שבת וחג.</span>
+      </div>
+
+      <div class="section">
+        <span class="day red">יום שבת – חג שמחת תורה</span>
+        <div class="row"><span class="time">07:00</span><span>תפילת שחרית</span></div>
+        <div class="row"><span class="time">17:30</span><span class="text">תפילת מנחה, ובסמוך הקפות שניות ותפילת ערבית של מוצאי שבת וחג.</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <span id="blessing" class="red">בברכת: ״חג כשר ושמח ומועדים לשמחה״</span>
+
+</div>
+</body>
+</html>
