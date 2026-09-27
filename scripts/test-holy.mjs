@@ -1,12 +1,14 @@
 process.env.TZ = 'Asia/Jerusalem';
 /**
  * Regression suite for holyOf() in src/lib/events/common.js — the Shabbat ∪
- * Yom Tov ∪ Chol HaMoed classifier every event-panel period is built on.
+ * Yom Tov classifier every event-panel period is built on. Chol HaMoed is
+ * NOT holy (gabbai request, Sep 27 2026): no candles or havdalah on CHM, so
+ * Sukkot/Pesach split into separate runs.
  *
  * Two layers:
- *   1. Named anchors (Sep 2026 – Oct 2027): each Yom Tov / CHM day, Shabbat,
- *      and look-alike days that must stay NOT holy (erev, Chanukah, Purim,
- *      fasts, Rosh Chodesh, Yom HaAtzmaut …).
+ *   1. Named anchors (Sep 2026 – Oct 2027): each Yom Tov day, Shabbat
+ *      (incl. Shabbat inside CHM), and look-alike days that must stay NOT
+ *      holy (weekday CHM, erev, Chanukah, Purim, fasts, Rosh Chodesh …).
  *   2. Full sweep, 1 Sep 2026 → 31 Oct 2027: every day is compared to an
  *      independent spec written as Hebrew dates (Israel calendar), so a
  *      hebcal flag change or a classifier edit that moves ANY day fails.
@@ -33,12 +35,12 @@ const hdOf = (iso) => {
 };
 const isHoly = (hd) => holyOf(eventsForHDate(hd, loc), hd);
 
-/** The spec, independent of hebcal's flags: Israel Yom Tov + CHM by Hebrew
- *  date. YK counts (it is a chag); Shabbat is added separately. */
+/** The spec, independent of hebcal's flags: Israel Yom Tov by Hebrew date.
+ *  YK counts (it is a chag); CHM does not; Shabbat is added separately. */
 const HOLY_HEBREW = {
-  [months.TISHREI]: [1, 2, 10, 15, 16, 17, 18, 19, 20, 21, 22], // RH, YK, Sukkot+CHM (incl. Hoshana Raba), Shmini Atzeret
-  [months.NISAN]: [15, 16, 17, 18, 19, 20, 21],                // Pesach I, CHM, Pesach VII
-  [months.SIVAN]: [6],                                         // Shavuot (one day in Israel)
+  [months.TISHREI]: [1, 2, 10, 15, 22], // RH, YK, Sukkot I, Shmini Atzeret
+  [months.NISAN]: [15, 21],             // Pesach I, Pesach VII
+  [months.SIVAN]: [6],                  // Shavuot (one day in Israel)
 };
 const specHoly = (hd) => hd.getDay() === 6
   || (HOLY_HEBREW[hd.getMonth()] ?? []).includes(hd.getDate());
@@ -58,7 +60,7 @@ for (const [iso, name] of [
   ['2027-10-23', 'Shmini Atzeret 5788 (Sat)'],
 ]) check(`${iso} ${name} → holy`, isHoly(hdOf(iso)));
 
-console.log('══ 2. Chol HaMoed');
+console.log('══ 2. Chol HaMoed — weekday CHM is NOT holy; Shabbat inside CHM is');
 for (const [iso, name] of [
   ['2026-09-27', 'Sukkot CHM day 1 (Sun)'],
   ['2026-10-01', 'Sukkot CHM (Thu)'],
@@ -68,7 +70,8 @@ for (const [iso, name] of [
   ['2027-04-27', 'Pesach CHM last (Tue)'],
   ['2027-10-17', 'Sukkot CHM 5788 (Sun)'],
   ['2027-10-22', 'Hoshana Raba 5788 (Fri)'],
-]) check(`${iso} ${name} → holy`, isHoly(hdOf(iso)));
+]) check(`${iso} ${name} → not holy`, !isHoly(hdOf(iso)));
+check('2027-04-24 Shabbat Chol HaMoed Pesach → holy (as Shabbat)', isHoly(hdOf('2027-04-24')));
 
 console.log('══ 3. Plain Shabbat');
 for (const iso of ['2026-10-17', '2026-12-05', '2027-02-13', '2027-07-24', '2027-09-25']) {
