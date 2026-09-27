@@ -1,7 +1,7 @@
 process.env.TZ = 'Asia/Jerusalem';
 // Regression: image-ready deadlock at the Hebrew year boundary (RH 5787).
 //
-// Mirrors App.jsx: displayHd rolls to the next Hebrew day after tzeit;
+// Mirrors lib/displayData.js + hooks/useSlideshow.js: displayHd rolls to the next Hebrew day after tzeit;
 // findActiveImage picks the first doc whose (month,day,year) matches;
 // the reset gate compares by imageUrl (via needsImageReset). Simulates the
 // whole kiosk minute-by-minute through erev RH → RH → after, tracking the
@@ -9,6 +9,7 @@ process.env.TZ = 'Asia/Jerusalem';
 import { strict as assert } from 'node:assert';
 import { HDate, Location, Zmanim } from '@hebcal/core';
 import { needsImageReset } from '../src/lib/slideshow.js';
+import { findActiveImage } from '../src/lib/imageSchedule.js';
 
 const gloc = new Location(31.42215, 34.58858, true, 'Asia/Jerusalem', 0);
 
@@ -22,19 +23,6 @@ const images = [
     startDay: 1,  startMonth: 1, endDay: 30, endMonth: 12, year: 0 },
 ];
 
-// ── App.jsx helpers (verbatim) ──
-const pack = (m, d) => (m - 1) * 30 + d;
-function isDateInRange(hMonth, hDay, sM, sD, eM, eD) {
-  const t = pack(hMonth, hDay), s = pack(sM, sD), e = pack(eM, eD);
-  if (s <= e) return t >= s && t <= e;
-  return t >= s || t <= e;
-}
-function findActiveImage(list, hMonth, hDay, hYear) {
-  return (list || []).find(img =>
-    (img.year == null || img.year === hYear) &&
-    isDateInRange(hMonth, hDay, img.startMonth, img.startDay, img.endMonth, img.endDay)
-  ) || null;
-}
 function displayHDateFor(now) {
   const z = new Zmanim(gloc, now);
   const tzaisAt = z.tzeit();
@@ -45,8 +33,8 @@ function displayHDateFor(now) {
 
 // ── kiosk simulation: React state + DOM truth, minute by minute ──
 function simulate(startIso, endIso, { resetByDocIdentity = false } = {}) {
-  let prevUrl = null;      // prevImageUrl state (App.jsx)
-  let imageReady = false;  // imageReady state (App.jsx)
+  let prevUrl = null;      // prevImageUrl state (useSlideshow)
+  let imageReady = false;  // imageReady state (useSlideshow)
   let imgKey = null;       // <img key={imageUrl}> — the mounted DOM node
   let first = true;
   const transitions = [];
