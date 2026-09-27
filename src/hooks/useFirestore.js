@@ -1,7 +1,7 @@
 /**
  * Firestore hook — fetches and subscribes to app config + prayers + image schedules.
  *
- * Firestore schema:
+ * Firestore schema (fallback values live in src/lib/defaults.js):
  *
  *   /config/app-config
  *     defaultViewDuration: number (seconds to show default view, default 15)
@@ -30,111 +30,73 @@
  *     deployedAt: string  (ISO timestamp, informational)
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { doc, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import {
+  DEFAULT_CONFIG, DEFAULT_PRAYERS, normalizeConfig, toHebcalLocation,
+} from '../lib/defaults';
 
 /** Stable empty array: returning a literal `[]` from the hook would give App
  * a fresh identity on every render, dragging the minute-bucketed display memo
  * into a per-second recompute in the fallback (no-Firestore) config. */
 const EMPTY_IMAGES = [];
 
-/** Hard-coded defaults used when Firebase is unavailable or empty */
-export const DEFAULTS = {
-  defaultViewDuration: 15,
-  imageDisplayDuration: 15,
-  title: 'משכן שמואל',
-  location: {
-    lat: 31.42215,
-    lng: 34.58858,
-    timezone: 'Asia/Jerusalem',
-    name: 'Netivot, Israel',
-    elevation: 0,
-  },
-  prayers: [
-    { name: 'שחרית של חול',     time: '07:00' },
-    { name: 'מנחה וקבלת שבת',   time: 'עם כניסת השבת' },
-    { name: 'שחרית של שבת',     time: '08:00' },
-    { name: 'מנחה של שבת',      time: '13:15' },
-    { name: 'ערבית של מוצ״ש',   time: '5 דקות לפני צאת השבת' },
-  ],
-};
+/**
+ * Subscribe to a Firestore doc or query. `onData` maps a snapshot to state;
+ * on error the state gets `fallback`. Returns the unsubscribe function.
+ */
+function watch(ref, label, setState, onData, fallback) {
+  return onSnapshot(
+    ref,
+    (snap) => setState(onData(snap)),
+    (err) => {
+      console.warn(`Firestore ${label} unavailable, using defaults:`, err.message);
+      setState(fallback);
+    },
+  );
+}
+
+/** Collection snapshot → array of docs with ids, or null when empty */
+function docsOrNull(snap) {
+  return snap.empty ? null : snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
 
 /**
- * React hook — subscribes to Firestore and returns live data.
- * Falls back to DEFAULTS if Firebase is not configured or offline.
+ * React hook — subscribes to Firestore and returns live data, always fully
+ * populated: falls back to lib/defaults.js when Firebase is unavailable,
+ * empty, or holds a bad value.
+ *
+ * `location` is a validated hebcal Location built from config.location.
  */
 export function useFirestoreData() {
   const [config, setConfig] = useState(null);
   const [prayers, setPrayers] = useState(null);
   const [images, setImages] = useState(null);
-  const unsubRef = useRef([]);
 
   useEffect(() => {
-    // Subscribe to /config/app-config
-    const unsubConfig = onSnapshot(
-      doc(db, 'config', 'app-config'),
-      (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          setConfig({
-            defaultViewDuration: data.defaultViewDuration ?? DEFAULTS.defaultViewDuration,
-            imageDisplayDuration: data.imageDisplayDuration ?? DEFAULTS.imageDisplayDuration,
-            title: data.title ?? DEFAULTS.title,
-            location: data.location ?? DEFAULTS.location,
-          });
-        } else {
-          setConfig({ ...DEFAULTS, title: DEFAULTS.title, location: DEFAULTS.location });
-        }
-      },
-      (err) => {
-        console.warn('Firestore config unavailable, using defaults:', err.message);
-        setConfig({ ...DEFAULTS, title: DEFAULTS.title, location: DEFAULTS.location });
-      }
-    );
-
-    // Subscribe to /prayers (ordered)
-    const qPrayers = query(collection(db, 'prayers'), orderBy('order'));
-    const unsubPrayers = onSnapshot(
-      qPrayers,
-      (snap) => {
-        if (!snap.empty) {
-          setPrayers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        } else {
-          setPrayers(null); // null = use DEFAULTS
-        }
-      },
-      (err) => {
-        console.warn('Firestore prayers unavailable:', err.message);
-        setPrayers(null);
-      }
-    );
-
-    // Subscribe to /images
-    const qImages = query(collection(db, 'images'), orderBy('name'));
-    const unsubImages = onSnapshot(
-      qImages,
-      (snap) => {
-        if (!snap.empty) {
-          setImages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        } else {
-          setImages(null);
-        }
-      },
-      (err) => {
-        console.warn('Firestore images unavailable:', err.message);
-        setImages(null);
-      }
-    );
-
-    unsubRef.current = [unsubConfig, unsubPrayers, unsubImages];
-    return () => unsubRef.current.forEach(u => u());
+    const unsubs = [
+      watch(doc(db, 'config', 'app-config'), 'config', setConfig,
+        snap => snap.exists() ? normalizeConfig(snap.data()) : DEFAULT_CONFIG,
+        DEFAULT_CONFIG),
+      watch(query(collection(db, 'prayers'), orderBy('order')), 'prayers', setPrayers,
+        docsOrNull, null),
+      watch(query(collection(db, 'images'), orderBy('name')), 'images', setImages,
+        docsOrNull, null),
+    ];
+    return () => unsubs.forEach(u => u());
   }, []);
 
+  const resolvedConfig = config ?? DEFAULT_CONFIG;
+  const location = useMemo(
+    () => toHebcalLocation(resolvedConfig.location),
+    [resolvedConfig.location],
+  );
+
   return {
-    config: config || DEFAULTS,
-    prayers: prayers || DEFAULTS.prayers,
+    config: resolvedConfig,
+    location,
+    prayers: prayers ?? DEFAULT_PRAYERS,
     images: images ?? EMPTY_IMAGES,
-    isConfigured: config != null,
   };
 }
