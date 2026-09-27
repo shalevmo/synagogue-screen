@@ -129,11 +129,13 @@ export function orHahaimAlot(gloc, hd) {
   return orHahaim(gloc, middayOf(hd)).alot;
 }
 
-/** A holy day for period purposes: Shabbat ∪ CHAG ∪ CHM. */
+/** A holy day for period purposes: Shabbat ∪ CHAG. Chol HaMoed is NOT
+ *  holy here (gabbai request, Sep 27 2026): no candles or havdalah on those
+ *  days, so Sukkot/Pesach split into separate runs and CHM shows banners
+ *  only. */
 export function holyOf(evs, hd) {
   if (hd.getDay() === 6) return true;                           // Shabbat
   if (hasChag(evs)) return true;                                 // Yom Tov
-  if (evs.some((ev) => (ev.getFlags?.() ?? 0) & flags.CHOL_HAMOED)) return true;
   return false;
 }
 
