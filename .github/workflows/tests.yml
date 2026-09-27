@@ -25,6 +25,9 @@ jobs:
       - name: Event-panel suite (92 checks)
         run: node scripts/test-events.mjs
 
+      - name: Holy-day classifier (Sep 2026 – Oct 2027 sweep)
+        run: node scripts/test-holy.mjs
+
       - name: Or Hahaim zmanim anchors
         run: node scripts/test-zmanim.mjs
 
