@@ -14,7 +14,7 @@
  *     name:  string  (Hebrew)
  *     time:  string  ("07:00" or "עם כניסת השבת")
  *
- *   /images/{autoId}
+ *   /images/{autoId}   (active-date logic: src/lib/imageSchedule.js)
  *     name:      string   (display name / description)
  *     imageUrl:  string   (Firebase Storage URL or any public URL)
  *     startDay:  number   (1-30)
@@ -59,37 +59,6 @@ export const DEFAULTS = {
     { name: 'ערבית של מוצ״ש',   time: '5 דקות לפני צאת השבת' },
   ],
 };
-
-/**
- * Converts a Firestore timestamp / date string to a comparable integer.
- * Compares only month and day (not year) for recurring schedules.
- */
-function packMonthDay(month, day) {
-  return (month - 1) * 30 + day; // crude but works for ≤ comparison
-}
-
-/** Check whether a Hebrew date (month, day) falls within [start, end] range */
-function isDateInRange(hMonth, hDay, startMonth, startDay, endMonth, endDay) {
-  const target = packMonthDay(hMonth, hDay);
-  const start = packMonthDay(startMonth, startDay);
-  const end = packMonthDay(endMonth, endDay);
-  // Handle wrap-around (e.g., Adar → Nisan)
-  if (start <= end) return target >= start && target <= end;
-  return target >= start || target <= end;
-}
-
-/**
- * Check if a Firestore image schedule is active for the given Hebrew date + year.
- * If the schedule's year is set, it must also match.
- */
-function isImageActive(image, hMonth, hDay, hYear) {
-  if (image.year != null && image.year !== hYear) return false;
-  return isDateInRange(
-    hMonth, hDay,
-    image.startMonth, image.startDay,
-    image.endMonth, image.endDay,
-  );
-}
 
 /**
  * React hook — subscribes to Firestore and returns live data.
@@ -162,12 +131,10 @@ export function useFirestoreData() {
     return () => unsubRef.current.forEach(u => u());
   }, []);
 
-  // Re-evaluate which image is active whenever images or today's Hebrew date changes
   return {
     config: config || DEFAULTS,
     prayers: prayers || DEFAULTS.prayers,
     images: images ?? EMPTY_IMAGES,
     isConfigured: config != null,
-    isImageActive,
   };
 }
