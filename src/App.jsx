@@ -3,7 +3,7 @@ import { HDate } from '@hebcal/core';
 import { useFirestoreData } from './hooks/useFirestore';
 import { useVersionReload } from './hooks/useVersionReload';
 import { stripNikkud, findShabbatReading } from './lib/reading';
-import { needsImageReset, findActiveImage } from './lib/slideshow';
+import { needsImageReset } from './lib/slideshow';
 import { computeEventLines } from './lib/events';
 import { orHahaim, dayFlipTzais } from './lib/zmanim.js';
 import './index.css';
@@ -38,6 +38,31 @@ const DOW_FMT = new Intl.DateTimeFormat('he', { weekday: 'short', timeZone: 'Asi
 function fmt(d) {
   if (!d) return '';
   return TIME_FMT.format(d);
+}
+
+/** Check whether a Hebrew date falls inside a Firestore schedule range */
+function isDateInRange(hMonth, hDay,
+                       startMonth, startDay,
+                       endMonth, endDay) {
+  const pack = (m, d) => (m - 1) * 30 + d;
+  const t = pack(hMonth, hDay);
+  const s = pack(startMonth, startDay);
+  const e = pack(endMonth, endDay);
+  if (s <= e) return t >= s && t <= e;
+  return t >= s || t <= e;   // wrap-around
+}
+
+/** Find the first active image for the current Hebrew date/year */
+function findActiveImage(images, hMonth, hDay, hYear) {
+  if (!images || images.length === 0) return null;
+  return images.find(img => {
+    if (img.year != null && img.year !== hYear) return false;
+    return isDateInRange(
+      hMonth, hDay,
+      img.startMonth, img.startDay,
+      img.endMonth, img.endDay,
+    );
+  }) || null;
 }
 
 /**

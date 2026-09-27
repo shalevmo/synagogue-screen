@@ -33,28 +33,3 @@ export function activeImageUrl(image) {
 export function needsImageReset(prevUrl, nextImage) {
   return activeImageUrl(nextImage) !== prevUrl;
 }
-/**
- * Check whether a Hebrew date (month, day) falls within [start, end].
- * Crude month*30+day packing — fine for ≤ comparison; wraps around
- * when start > end (e.g. Adar → Nisan).
- */
-function isDateInRange(hMonth, hDay, startMonth, startDay, endMonth, endDay) {
-  const pack = (m, d) => (m - 1) * 30 + d;
-  const t = pack(hMonth, hDay);
-  const s = pack(startMonth, startDay);
-  const e = pack(endMonth, endDay);
-  if (s <= e) return t >= s && t <= e;
-  return t >= s || t <= e;
-}
-
-/**
- * Find the first /images schedule active on the given Hebrew date.
- * A schedule with `year` set must also match the Hebrew year.
- */
-export function findActiveImage(images, hMonth, hDay, hYear) {
-  if (!images || images.length === 0) return null;
-  return images.find(img =>
-    (img.year == null || img.year === hYear) &&
-    isDateInRange(hMonth, hDay, img.startMonth, img.startDay, img.endMonth, img.endDay)
-  ) || null;
-}
