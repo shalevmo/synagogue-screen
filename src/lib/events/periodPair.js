@@ -5,7 +5,7 @@
  * (shkiah+32 of its last day). Every day of the period shows the same pair.
  *
  * A holy period = a maximal run of consecutive holy days (holy = Shabbat ∪
- * CHAG ∪ CHM; a major fast day (YK / Tisha B'Av) continues a run as a
+ * CHAG — Chol HaMoed is excluded; a major fast day (YK / Tisha B'Av) continues a run as a
  * "bridge" but is not a member — its fast block covers it).
  */
 import { HDate } from '@hebcal/core';

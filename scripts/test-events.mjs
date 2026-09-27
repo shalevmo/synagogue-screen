@@ -140,22 +140,31 @@ console.log('══ 11. Erev Sukkot (Fri 25 Sep 2026, 14 Tishrei)');
   check('time = 18:16 (2net: 18:16)', time(res, 'כניסת החג') === '18:16');
 }
 
-console.log('══ 12. Sukkot d1 ON SHABBAT (Sat 26 Sep 2026) — one pair for the whole run');
+console.log('══ 12. Sukkot d1 ON SHABBAT (Sat 26 Sep 2026) — pair ends at d1 (CHM is not holy)');
 {
   const res = computeEventLines(loc, at(2026, 9, 26, 10, 0));
   console.log('   ', lines(res));
   check('banner סוכות א׳ (ktiv male!)', res.banners.includes('סוכות א׳'));
   check('כניסת החג 18:16 (period entry)', time(res, 'כניסת החג') === '18:16');
-  check('יציאת החג 18:56 (period exit = SA Sunday)', time(res, 'יציאת החג') === '18:56');
+  check('יציאת החג 19:05 (d1 exit — CHM does not extend the run)', time(res, 'יציאת החג') === '19:05');
 }
 
-console.log('══ 13. HR Friday (2 Oct 2026) — pair + tonight candles (existing flame)');
+console.log('══ 12b. CHM Sukkot (Sun 27 Sep 2026) — banner only, no times');
+{
+  const res = computeEventLines(loc, at(2026, 9, 27, 10, 0));
+  console.log('   ', lines(res));
+  check('banner סוכות ב׳', res.banners.includes('סוכות ב׳'));
+  check('no timed lines on CHM', res.timed.length === 0);
+}
+
+console.log('══ 13. HR Friday (2 Oct 2026) — erev SA: tonight entry + SA exit');
 {
   const res = computeEventLines(loc, at(2026, 10, 2, 10, 0));
   console.log('   ', lines(res));
   check('banner סוכות ז׳ הושענא רבה (ktiv male!)', res.banners.some((b) => b.includes('סוכות ז׳') && b.includes('הושענא רבה')));
-  check('pair present: כניסת החג 18:16', time(res, 'כניסת החג') === '18:16');
-  check('supplementary candles 18:07 (2net SA: 18:07)', time(res, 'הדלקת נרות') === '18:07');
+  check('כניסת החג 18:07 (2net SA: 18:07)', time(res, 'כניסת החג') === '18:07');
+  check('יציאת החג 18:56 (SA exit)', time(res, 'יציאת החג') === '18:56');
+  check('no separate הדלקת נרות line', !res.timed.some((t) => t.label === 'הדלקת נרות'));
 }
 
 console.log('══ 14. SA + ST Shabbat (Sat 3 Oct 2026, 22 Tishrei) — final pair day');
@@ -165,7 +174,7 @@ console.log('══ 14. SA + ST Shabbat (Sat 3 Oct 2026, 22 Tishrei) — final p
   check('banner שמיני עצרת', res.banners.includes('שמיני עצרת'));
   check('יציאת החג 18:56 = SA shkiah 18:24+32',
     time(res, 'יציאת החג') === '18:56');
-  check('כניסת החג 18:16 (same entry as d1)', time(res, 'כניסת החג') === '18:16');
+  check('כניסת החג 18:07 (SA\'s own entry, HR Friday)', time(res, 'כניסת החג') === '18:07');
 }
 
 console.log('══ 15. Post-SA linger (exit Sat 18:56 → lingers to 19:56)');
@@ -344,15 +353,14 @@ console.log('══ 22. Modern holidays, winter anchors, maqaf banners, YK bridg
 
 console.log('══ 23. Candles ALWAYS paired with the exit — Shabbat/Yom Tov overlap');
 {
-  // ── Yom Tov run with an INNER Shabbat: Sukkot 5786 (erev Mon 6 Oct 2025,
-  //    run Tue 7 Oct → ST Mon 13 Oct). The chol erev must show the CHAG
-  //    exit of the run's true last day (ST, 18:10+32), NOT an imagined
-  //    Friday-candles havdalah — walkForward spans the inner Shabbat.
+  // ── Erev Sukkot 5786 (Mon 6 Oct 2025): CHM is not holy, so the run is
+  //    d1 alone (Tue 7 Oct) — the exit is d1's chag exit (18:19+32), not
+  //    ST's; the CHM Shabbat inside Sukkot is its own run.
   const erev = computeEventLines(loc, at(2025, 10, 6, 10, 0));
   console.log('    erev Sukkot-into-Shabbat (Mon 6 Oct 2025) →', lines(erev));
   check('erev: כניסת החג shown', erev.timed.some((t) => t.label === 'כניסת החג'));
   check('erev: exit is יציאת החג (chag run, not havdalah)', erev.timed.some((t) => t.label === 'יציאת החג'));
-  check('erev: exit 18:42 = ST shkiah 18:10+32 (run end)', time(erev, 'יציאת החג') === '18:42');
+  check('erev: exit 18:51 = d1 chag exit (run end)', time(erev, 'יציאת החג') === '18:51');
   check('erev: NO הבדלה line', !erev.timed.some((t) => t.label === 'הבדלה'));
 
   // ── Chag run ENDING on Shabbat (RH 5784): d1 Friday 15 Sep 2023, d2
