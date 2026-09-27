@@ -14,7 +14,7 @@
  *     name:  string  (Hebrew)
  *     time:  string  ("07:00" or "עם כניסת השבת")
  *
- *   /images/{autoId}
+ *   /images/{autoId}   (active-date logic: src/lib/imageSchedule.js)
  *     name:      string   (display name / description)
  *     imageUrl:  string   (Firebase Storage URL or any public URL)
  *     startDay:  number   (1-30)

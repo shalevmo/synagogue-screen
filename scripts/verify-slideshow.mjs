@@ -9,6 +9,7 @@ process.env.TZ = 'Asia/Jerusalem';
 import { strict as assert } from 'node:assert';
 import { HDate, Location, Zmanim } from '@hebcal/core';
 import { needsImageReset } from '../src/lib/slideshow.js';
+import { findActiveImage } from '../src/lib/imageSchedule.js';
 
 const gloc = new Location(31.42215, 34.58858, true, 'Asia/Jerusalem', 0);
 
@@ -22,19 +23,6 @@ const images = [
     startDay: 1,  startMonth: 1, endDay: 30, endMonth: 12, year: 0 },
 ];
 
-// ── App.jsx helpers (verbatim) ──
-const pack = (m, d) => (m - 1) * 30 + d;
-function isDateInRange(hMonth, hDay, sM, sD, eM, eD) {
-  const t = pack(hMonth, hDay), s = pack(sM, sD), e = pack(eM, eD);
-  if (s <= e) return t >= s && t <= e;
-  return t >= s || t <= e;
-}
-function findActiveImage(list, hMonth, hDay, hYear) {
-  return (list || []).find(img =>
-    (img.year == null || img.year === hYear) &&
-    isDateInRange(hMonth, hDay, img.startMonth, img.startDay, img.endMonth, img.endDay)
-  ) || null;
-}
 function displayHDateFor(now) {
   const z = new Zmanim(gloc, now);
   const tzaisAt = z.tzeit();
