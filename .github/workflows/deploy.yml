@@ -11,6 +11,16 @@ permissions:
   id-token: write
   contents: write
 
+# One deploy at a time. A newer deploy waits for the running one instead of
+# cancelling it: a run killed mid-way can leave S3 with new bundles but the
+# old index.html, or publish a version to Firestore without creating its tag,
+# so the next run reuses that number and screens never reload. GitHub keeps
+# only the newest pending run in the group, so bursts still collapse into
+# one follow-up deploy of the latest commit.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest

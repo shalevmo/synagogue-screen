@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { HDate, Location, Zmanim } from '@hebcal/core';
 import { useFirestoreData } from './hooks/useFirestore';
 import { useVersionReload } from './hooks/useVersionReload';
 import { useClock } from './hooks/useClock';
@@ -34,32 +33,9 @@ function handleKeyDown(e) {
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const { config, prayers, images } = useFirestoreData();
+  const { config, location: gloc, prayers, images } = useFirestoreData();
   useVersionReload(); // Firestore /version/current → reload on newer deploy
   const { now, minute } = useClock();
-
-  // Build Location object from config (memoized — no effect or extra state).
-  // Firestore owns this data: a bad `location` doc (garbage lat or timezone)
-  // would throw inside every zmanim memo and white-screen the kiosk. Validate
-  // by construction — smoke-run a sunrise once per config change and fall
-  // back to the Netivot default if it throws.
-  const gloc = useMemo(() => {
-    const loc = config.location || {};
-    try {
-      const candidate = new Location(
-        loc.lat ?? 31.42215,
-        loc.lng ?? 34.58858,
-        true,
-        loc.timezone ?? 'Asia/Jerusalem',
-        loc.elevation ?? 0,
-      );
-      new Zmanim(candidate, new HDate()).sunrise(); // smoke-test: validates tz + coords
-      return candidate;
-    } catch {
-      console.warn('Bad config.location, falling back to Netivot default');
-      return new Location(31.42215, 34.58858, true, 'Asia/Jerusalem', 0);
-    }
-  }, [config.location]);
 
   // Heavy date/zmanim/parsha math recomputed once per minute (keyed by the
   // minute bucket), not on every clock tick. Pure computation during render.
@@ -77,13 +53,11 @@ export default function App() {
 
   const { showingImage, handleImageLoad, handleImageError } = useSlideshow(
     activeImage,
-    (config.defaultViewDuration ?? 15) * 1000,
-    (config.imageDisplayDuration ?? 15) * 1000,
+    config.defaultViewDuration * 1000,
+    config.imageDisplayDuration * 1000,
   );
 
   // ── render ──────────────────────────────────────────────────────────────
-
-  const title = config?.title ?? 'משכן שמואל';
 
   return (
     <div
@@ -97,7 +71,7 @@ export default function App() {
     >
       <div className="container-fluid p-0 w-100 h-100 d-flex flex-column">
 
-        <Header jewishDate={jewishDate} title={title} dayAndDate={dayAndDate} />
+        <Header jewishDate={jewishDate} title={config.title} dayAndDate={dayAndDate} />
 
         {/* No horizontal separator — original used line.png only as vertical
             column edges via .bordered CSS (Asset 2.jpg was broken/404 there) */}
