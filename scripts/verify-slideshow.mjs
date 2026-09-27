@@ -7,10 +7,11 @@ process.env.TZ = 'Asia/Jerusalem';
 // whole kiosk minute-by-minute through erev RH → RH → after, tracking the
 // DOM-level truth (img key unchanged ⇒ no load event ⇒ imageReady unchanged).
 import { strict as assert } from 'node:assert';
-import { HDate, Location, Zmanim } from '@hebcal/core';
-import { needsImageReset } from '../src/lib/slideshow.js';
+import { HDate, Zmanim } from '@hebcal/core';
+import { needsImageReset, findActiveImage } from '../src/lib/slideshow.js';
+import { DEFAULT_LOCATION, toHebcalLocation } from '../src/lib/defaults.js';
 
-const gloc = new Location(31.42215, 34.58858, true, 'Asia/Jerusalem', 0);
+const gloc = toHebcalLocation(DEFAULT_LOCATION);
 
 // The three /images docs live in production on 2026-09-09 (verbatim fields).
 const images = [
@@ -22,19 +23,6 @@ const images = [
     startDay: 1,  startMonth: 1, endDay: 30, endMonth: 12, year: 0 },
 ];
 
-// ── App.jsx helpers (verbatim) ──
-const pack = (m, d) => (m - 1) * 30 + d;
-function isDateInRange(hMonth, hDay, sM, sD, eM, eD) {
-  const t = pack(hMonth, hDay), s = pack(sM, sD), e = pack(eM, eD);
-  if (s <= e) return t >= s && t <= e;
-  return t >= s || t <= e;
-}
-function findActiveImage(list, hMonth, hDay, hYear) {
-  return (list || []).find(img =>
-    (img.year == null || img.year === hYear) &&
-    isDateInRange(hMonth, hDay, img.startMonth, img.startDay, img.endMonth, img.endDay)
-  ) || null;
-}
 function displayHDateFor(now) {
   const z = new Zmanim(gloc, now);
   const tzaisAt = z.tzeit();

@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
-import { HDate, Location, Zmanim } from '@hebcal/core';
+import { HDate } from '@hebcal/core';
 import { useFirestoreData } from './hooks/useFirestore';
 import { useVersionReload } from './hooks/useVersionReload';
 import { stripNikkud, findShabbatReading } from './lib/reading';
-import { needsImageReset } from './lib/slideshow';
+import { needsImageReset, findActiveImage } from './lib/slideshow';
 import { computeEventLines } from './lib/events';
 import { orHahaim, dayFlipTzais } from './lib/zmanim.js';
 import './index.css';
@@ -38,31 +38,6 @@ const DOW_FMT = new Intl.DateTimeFormat('he', { weekday: 'short', timeZone: 'Asi
 function fmt(d) {
   if (!d) return '';
   return TIME_FMT.format(d);
-}
-
-/** Check whether a Hebrew date falls inside a Firestore schedule range */
-function isDateInRange(hMonth, hDay,
-                       startMonth, startDay,
-                       endMonth, endDay) {
-  const pack = (m, d) => (m - 1) * 30 + d;
-  const t = pack(hMonth, hDay);
-  const s = pack(startMonth, startDay);
-  const e = pack(endMonth, endDay);
-  if (s <= e) return t >= s && t <= e;
-  return t >= s || t <= e;   // wrap-around
-}
-
-/** Find the first active image for the current Hebrew date/year */
-function findActiveImage(images, hMonth, hDay, hYear) {
-  if (!images || images.length === 0) return null;
-  return images.find(img => {
-    if (img.year != null && img.year !== hYear) return false;
-    return isDateInRange(
-      hMonth, hDay,
-      img.startMonth, img.startDay,
-      img.endMonth, img.endDay,
-    );
-  }) || null;
 }
 
 /**
@@ -133,34 +108,11 @@ function handleKeyDown(e) {
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const { config, prayers, images } = useFirestoreData();
+  const { config, location: gloc, prayers, images } = useFirestoreData();
   useVersionReload(); // Firestore /version/current → reload on newer deploy
   const [now, setNow] = useState(() => new Date());
   const [showDefault, setShowDefault] = useState(true);
   const [imageReady, setImageReady] = useState(false);
-
-  // Build Location object from config (memoized — no effect or extra state).
-  // Firestore owns this data: a bad `location` doc (garbage lat or timezone)
-  // would throw inside every zmanim memo and white-screen the kiosk. Validate
-  // by construction — smoke-run a sunrise once per config change and fall
-  // back to the Netivot default if it throws.
-  const gloc = useMemo(() => {
-    const loc = config.location || {};
-    try {
-      const candidate = new Location(
-        loc.lat ?? 31.42215,
-        loc.lng ?? 34.58858,
-        true,
-        loc.timezone ?? 'Asia/Jerusalem',
-        loc.elevation ?? 0,
-      );
-      new Zmanim(candidate, new HDate()).sunrise(); // smoke-test: validates tz + coords
-      return candidate;
-    } catch {
-      console.warn('Bad config.location, falling back to Netivot default');
-      return new Location(31.42215, 34.58858, true, 'Asia/Jerusalem', 0);
-    }
-  }, [config.location]);
 
   // Single ticker: the only state this component owns besides the view toggle.
   // setState runs inside the interval callback, never synchronously in the effect.
@@ -206,8 +158,8 @@ export default function App() {
   // Slideshow: show the current view for its configured duration, then flip.
   // The cycle only runs while the scheduled image is fully decoded & ready —
   // if the image is still downloading, the default view simply stays up.
-  const defaultDur = (config.defaultViewDuration ?? 15) * 1000;
-  const imageDur  = (config.imageDisplayDuration ?? 15) * 1000;
+  const defaultDur = config.defaultViewDuration * 1000;
+  const imageDur  = config.imageDisplayDuration * 1000;
   useEffect(() => {
     if (!activeImage || !imageReady) return;
     const timer = setTimeout(
@@ -236,8 +188,6 @@ export default function App() {
 
   // ── render ──────────────────────────────────────────────────────────────
 
-  const title = config?.title ?? 'משכן שמואל';
-
   return (
     <div
       id="content-wrapper"
@@ -253,7 +203,7 @@ export default function App() {
         {/* Header */}
         <div className="row align-items-end mt-3 mb-3 ps-5 pe-5 text-center">
           <span className="h1 col-4 mb-0 ps-3 pe-5">{jewishDate}</span>
-          <span id="title" className="col-4 red">{title}</span>
+          <span id="title" className="col-4 red">{config.title}</span>
           <span className="h1 col-4 mb-0 ps-3 pe-3">{dayAndDate}</span>
         </div>
 
