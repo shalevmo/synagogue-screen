@@ -34,7 +34,7 @@ import { Zmanim } from '@hebcal/core';
  * The day-flip tzeit — hebcal's default 8.5°, NOT the displayed Or Hahaim
  * tzais (shkiah + ¼ hour). Locked in docs/adr/0001-day-flip-tzais-85.md.
  *
- * Single source for BOTH the header's Jewish-date flip (App.jsx) and the
+ * Single source for BOTH the header's Jewish-date flip (lib/displayData.js) and the
  * event panel's display day (lib/events.js) — they must flip inseparably;
  * when this changes, both change together.
  *

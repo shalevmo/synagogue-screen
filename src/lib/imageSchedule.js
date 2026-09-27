@@ -1,6 +1,6 @@
 /**
  * Poster (slideshow image) scheduling — which /images doc is active on a
- * given Hebrew date. Single source for App.jsx and scripts/verify-slideshow.mjs.
+ * given Hebrew date. Single source for lib/displayData.js and scripts/verify-slideshow.mjs.
  *
  * Schedule fields (see the /images schema in src/hooks/useFirestore.js):
  *   startMonth/startDay, endMonth/endDay — hebcal month index

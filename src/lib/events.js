@@ -50,7 +50,7 @@ import { lingerOf } from './events/linger.js';
 export function computeEventLines(gloc, now) {
   // Display day: after tzeit the header shows tomorrow — follow it exactly.
   // dayFlipTzais (zmanim.js) is the single source locked in ADR-0001 —
-  // App.jsx's header flip uses the same call, so both flip inseparably.
+  // lib/displayData.js's header flip uses the same call, so both flip inseparably.
   const tzaisNow = dayFlipTzais(gloc, now);
   const isAfterTzais = tzaisNow && now > tzaisNow;
   const today = isAfterTzais ? new HDate(new HDate(now).abs() + 1) : new HDate(now);

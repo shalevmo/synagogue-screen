@@ -1,7 +1,7 @@
 process.env.TZ = 'Asia/Jerusalem';
 // Regression: image-ready deadlock at the Hebrew year boundary (RH 5787).
 //
-// Mirrors App.jsx: displayHd rolls to the next Hebrew day after tzeit;
+// Mirrors lib/displayData.js + hooks/useSlideshow.js: displayHd rolls to the next Hebrew day after tzeit;
 // findActiveImage picks the first doc whose (month,day,year) matches;
 // the reset gate compares by imageUrl (via needsImageReset). Simulates the
 // whole kiosk minute-by-minute through erev RH → RH → after, tracking the
@@ -33,8 +33,8 @@ function displayHDateFor(now) {
 
 // ── kiosk simulation: React state + DOM truth, minute by minute ──
 function simulate(startIso, endIso, { resetByDocIdentity = false } = {}) {
-  let prevUrl = null;      // prevImageUrl state (App.jsx)
-  let imageReady = false;  // imageReady state (App.jsx)
+  let prevUrl = null;      // prevImageUrl state (useSlideshow)
+  let imageReady = false;  // imageReady state (useSlideshow)
   let imgKey = null;       // <img key={imageUrl}> — the mounted DOM node
   let first = true;
   const transitions = [];

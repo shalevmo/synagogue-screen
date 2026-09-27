@@ -104,7 +104,7 @@ export function findShabbatReading(now, gloc, tzais) {
   }
 
   // No parsha this Shabbat — the reading is the holiday's, via leyning.
-  // The header stays "פרשת השבוע" (App.jsx).
+  // The header stays "פרשת השבוע" (components/CenterPanel.jsx).
   const holidayName = holidayReadingName(shabbatHd);
   return holidayName
     ? { text: holidayName, isHoliday: true }

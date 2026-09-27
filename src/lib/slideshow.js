@@ -1,7 +1,7 @@
 /**
  * Slideshow image-transition logic.
  *
- * The holiday <img> in App.jsx is keyed by `imageUrl`: React reuses the same
+ * The holiday <img> (components/HolidayImage.jsx) is keyed by `imageUrl`: React reuses the same
  * DOM node (and the browser fires NO new load event) whenever the key is
  * unchanged. The "did the image change?" check MUST therefore compare by
  * imageUrl as well — resetting on anything else (e.g. Firestore doc identity)

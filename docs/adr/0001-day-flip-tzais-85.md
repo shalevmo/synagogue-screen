@@ -47,5 +47,5 @@ inseparably.
 
 - `scripts/test-events.mjs` linger checks (§15, §16) assert lines
   survive past the 8.5° flip.
-- The tzeit() call sites: `src/App.jsx` (computeDisplayData) and
+- The tzeit() call sites: `src/lib/displayData.js` (computeDisplayData) and
   `src/lib/events.js` (computeEventLines) — keep both argument-less.
