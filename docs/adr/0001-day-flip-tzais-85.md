@@ -45,7 +45,7 @@ inseparably.
 
 ## Verification
 
-- `scripts/test-events.mjs` linger checks (§15, §16) assert lines
+- `test/events.test.js` linger checks (§15, §16) assert lines
   survive past the 8.5° flip.
 - The tzeit() call sites: `src/lib/displayData.js` (computeDisplayData) and
   `src/lib/events.js` (computeEventLines) — keep both argument-less.

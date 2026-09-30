@@ -23,4 +23,9 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    // Node-side code: test suite and tool configs.
+    files: ['test/**/*.js', '*.config.js'],
+    languageOptions: { globals: globals.node },
+  },
 ])

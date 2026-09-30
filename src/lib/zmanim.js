@@ -11,7 +11,7 @@
  * Netivot (anchors 2026-09-14, 2026-09-19, 2026-12-21, 2027-03-21, 2027-06-21,
  * pulled via scripts/pull-2net-methods.mjs; every value matches within the
  * accepted 1–2 min engine drift, most within 1 min — pinned by
- * scripts/test-zmanim.mjs):
+ * test/zmanim.test.js):
  *
  *   standard hour      h = (shkiah − sunrise) / 12
  *   עלות השחר           alot = sunrise − 1.25·h          (72 zmanit minutes)

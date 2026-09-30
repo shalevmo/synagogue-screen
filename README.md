@@ -23,6 +23,14 @@ Build for production:
 npm run build
 ```
 
+Run the tests (Vitest, files in `test/`):
+
+```bash
+npm test                              # once, as CI does
+npm run test:watch                    # re-run on save
+npx vitest run -u test/golden.test.js # re-pin the golden digest after an intended event-panel change
+```
+
 ## Firebase setup
 
 The app expects a Firebase project with Firestore enabled.
