@@ -1,5 +1,7 @@
+import { memo } from 'react';
+
 /** Right column: prayer times from Firestore */
-export default function PrayersColumn({ prayers }) {
+function PrayersColumn({ prayers }) {
   return (
     <div className="bordered col-4 d-flex flex-column p-3 pb-5 justify-content-between">
       {prayers.map(p => (
@@ -11,3 +13,5 @@ export default function PrayersColumn({ prayers }) {
     </div>
   );
 }
+
+export default memo(PrayersColumn);

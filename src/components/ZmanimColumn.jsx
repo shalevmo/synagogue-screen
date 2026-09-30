@@ -1,5 +1,7 @@
+import { memo } from 'react';
+
 /** Left column: Or Hahaim zmanim (rows from lib/displayData.js) */
-export default function ZmanimColumn({ zmanimTimes }) {
+function ZmanimColumn({ zmanimTimes }) {
   return (
     <div className="bordered col-4 d-flex flex-column p-3 pb-5 pe-5 justify-content-between">
       {zmanimTimes.map(z => (
@@ -11,3 +13,5 @@ export default function ZmanimColumn({ zmanimTimes }) {
     </div>
   );
 }
+
+export default memo(ZmanimColumn);
